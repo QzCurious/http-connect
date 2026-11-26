@@ -1,7 +1,7 @@
 import { path } from "./path";
 import { expectTypeOf, test } from "vitest";
 import { z } from "zod";
-import { endpoint, type FormDataObject, type URLSearchParamsObject } from "../public";
+import { endpoint, request, type FormDataObject, type URLSearchParamsObject } from "../public";
 
 const empty = { status: 204 } as const;
 
@@ -88,7 +88,15 @@ test("supports every encoder and native/project data, independent of media type"
   });
 });
 
-test("checks every output, rejecting uncertain and unsupported members", () => {
+test("uses native assignability for permissive body schemas", () => {
+  request({ encodeAs: "json", body: z.any() });
+  request({ encodeAs: "json", body: z.custom<{}>() });
+  request({ encodeAs: "json", body: z.object({ value: z.any() }) });
+  request({ encodeAs: "text", body: z.any() });
+  request({ encodeAs: "stream", body: z.custom<ReadableStream<any>>() });
+});
+
+test("rejects body outputs incompatible with the encoder", () => {
   endpoint({
     method: "POST",
     path: path("/"),
@@ -104,38 +112,8 @@ test("checks every output, rejecting uncertain and unsupported members", () => {
     path: path("/"),
     request: {
       encodeAs: "json",
-      // @ts-expect-error - `json` rejects unconstrained `any` output
-      body: z.any(),
-    },
-    response: empty,
-  });
-  endpoint({
-    method: "POST",
-    path: path("/"),
-    request: {
-      encodeAs: "json",
       // @ts-expect-error - `object` permits functions and other non-JSON values
       body: z.custom<object>(),
-    },
-    response: empty,
-  });
-  endpoint({
-    method: "POST",
-    path: path("/"),
-    request: {
-      encodeAs: "json",
-      // @ts-expect-error - `{}` permits non-nullish values such as `bigint`
-      body: z.custom<{}>(),
-    },
-    response: empty,
-  });
-  endpoint({
-    method: "POST",
-    path: path("/"),
-    request: {
-      encodeAs: "json",
-      // @ts-expect-error - a property typed as `any` leaves JSON compatibility unproven
-      body: z.object({ value: z.any() }),
     },
     response: empty,
   });
@@ -193,16 +171,6 @@ test("checks every output, rejecting uncertain and unsupported members", () => {
     method: "POST",
     path: path("/"),
     request: {
-      encodeAs: "stream",
-      // @ts-expect-error - `stream` requires `Uint8Array` chunks and rejects `ReadableStream<any>`
-      body: z.custom<ReadableStream<any>>(),
-    },
-    response: empty,
-  });
-  endpoint({
-    method: "POST",
-    path: path("/"),
-    request: {
       encodeAs: "text",
       // @ts-expect-error - an optional schema can output `undefined`, which `text` rejects
       body: z.string().optional(),
@@ -241,16 +209,6 @@ test("checks every output, rejecting uncertain and unsupported members", () => {
     request: {
       encodeAs: "json",
       body: z.date().transform((value) => value.toISOString()),
-    },
-    response: empty,
-  });
-  endpoint({
-    method: "POST",
-    path: path("/"),
-    request: {
-      encodeAs: "text",
-      // @ts-expect-error - `text` rejects unconstrained `any` output
-      body: z.any(),
     },
     response: empty,
   });
@@ -305,19 +263,6 @@ test("requires paired declarations, with no extension keys or callbacks", () => 
   });
 });
 
-test("rejects a native FormData body schema output", () => {
-  endpoint({
-    method: "POST",
-    path: path("/"),
-    request: {
-      encodeAs: "form-data",
-      // @ts-expect-error - multipart body schemas must produce a structured object
-      body: z.instanceof(FormData),
-    },
-    response: empty,
-  });
-});
-
 test("reserves Content-Type only for form-data", () => {
   endpoint({
     method: "POST",
@@ -366,7 +311,6 @@ test("checks nested recursive outputs without hiding unsafe subtypes", () => {
     path: path("/"),
     request: {
       encodeAs: "json",
-      // @ts-expect-error - `any` in the recursive subtype leaves JSON compatibility unproven
       body: z.custom<UncertainTree>(),
     },
     response: empty,

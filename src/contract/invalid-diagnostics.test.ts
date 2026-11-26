@@ -13,9 +13,31 @@ const endpointWithRequest = (fields: string, template = "/") =>
 
 const cases = [
   [
+    endpointWithRequest(
+      'encodeAs: "form-urlencoded", body: z.union([z.instanceof(URLSearchParams), z.string(), z.array(z.tuple([z.string(), z.string()])), z.object({ tag: z.string() })])',
+    ),
+    "body",
+    "Type 'string' is not assignable to type 'URLSearchParamsObject'",
+  ],
+  [
+    endpointWithRequest('encodeAs: "form-data", body: z.instanceof(FormData)'),
+    "body",
+    "Type 'FormData' is not assignable to type 'FormDataObject'",
+  ],
+  [
+    endpointWithRequest('encodeAs: "binary", body: z.string()'),
+    "body",
+    "Type 'string' is not assignable to type 'ArrayBuffer | Blob | Uint8Array",
+  ],
+  [
+    endpointWithRequest('encodeAs: "stream", body: z.string()'),
+    "body",
+    "Type 'string' is not assignable to type 'ReadableStream<Uint8Array",
+  ],
+  [
     'request({ encodeAs: "text", body: z.number() })',
     "body",
-    "all request body schema outputs must support",
+    "Type 'number' is not assignable to type 'string'",
   ],
   [
     'response({ status: 201, decodeAs: "text", body: z.number() })',
@@ -25,7 +47,7 @@ const cases = [
   [
     endpointWithRequest('encodeAs: "json", body: z.undefined()', "/users/{id}"),
     "body",
-    "all request body schema outputs must support",
+    "Type 'undefined' is not assignable to type 'JsonValue'",
   ],
   [
     'endpoint({ method: "GET", path: path("/:id/{other}"), request: {}, response: { status: 204 } })',
@@ -47,7 +69,7 @@ const cases = [
   [
     endpointWithRequest('encodeAs: "text", body: z.number()'),
     "body",
-    "all request body schema outputs must support",
+    "Type 'number' is not assignable to type 'string'",
   ],
   [
     'endpoint({ method: "GET", path: path("/"), request: {}, response: [{ status: 200 }, { status: 201, decodeAs: "text", body: z.number() }] })',
@@ -88,7 +110,7 @@ const cases = [
   ],
 ] as const;
 
-test.each(cases)("custom diagnostics explain %s", async (expression, field, message) => {
+test.each(cases)("diagnostics explain %s", async (expression, field, message) => {
   const document = await server.open(
     path.join(process.cwd(), "src", "__invalid_diagnostics.ts"),
     `
