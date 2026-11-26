@@ -1,0 +1,3 @@
+# Method and body compatibility belongs to the Transport Boundary
+
+The Request Shape may declare a body for any supported HTTP method so an Endpoint Contract can describe the backend route. Fetch cannot construct a request with a body for `GET` or `HEAD`. Binding such a contract with `transport.createFetcher(endpoint)` requires every alternative to rule out that combination. TypeScript rejects a widened Endpoint Contract when it lacks that guarantee. For untyped callers, the fetcher call rejects with the native `TypeError` from the `Request` constructor. The same rule applies to every injected fetch implementation. [ADR 0011](0011-fetch-is-the-transport-interface.md)
