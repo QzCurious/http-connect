@@ -209,7 +209,7 @@ test("allows canonical method-agnostic request payloads", () => {
     body: z.object({ term: z.string() }),
   });
 
-  expectTypeOf(shape).toMatchTypeOf<RequestShape>();
+  expectTypeOf(shape).toExtend<RequestShape>();
 });
 
 test("rejects body outputs incompatible with the selected encoder", () => {

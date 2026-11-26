@@ -36,6 +36,6 @@ describe("toFormData", () => {
     expectTypeOf({
       files: [{ file: new Blob(["a"]) }],
       flags: [true, null, undefined],
-    }).toMatchTypeOf<FormDataObject>();
+    }).toExtend<FormDataObject>();
   });
 });

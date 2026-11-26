@@ -25,7 +25,7 @@ test("ResponseShape satisfies authoring requires body and decodeAs together", ()
   // @ts-expect-error - ResponseShape requires decodeAs with body
   bodyOnly satisfies ResponseShape;
 
-  expectTypeOf(withoutBody).toMatchTypeOf<ResponseShape>();
+  expectTypeOf(withoutBody).toExtend<ResponseShape>();
   expectTypeOf(withBody.decodeAs).toEqualTypeOf<"json">();
 });
 

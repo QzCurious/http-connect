@@ -91,7 +91,7 @@ test("accepts single shapes and preserves their literals", () => {
     request: getRequest,
     response: okResponse,
   });
-  expectTypeOf(contract).toMatchTypeOf<EndpointContract>();
+  expectTypeOf(contract).toExtend<EndpointContract>();
   expectTypeOf(contract.request).toEqualTypeOf<typeof getRequest>();
   expectTypeOf(contract.response).toEqualTypeOf<typeof okResponse>();
 });
@@ -428,7 +428,7 @@ test("preserves single response unions", () => {
     response: shape,
   });
   expectTypeOf(contract.response).toEqualTypeOf<typeof shape>();
-  expectTypeOf(contract.response).toMatchTypeOf<ResponseShape>();
+  expectTypeOf(contract.response).toExtend<ResponseShape>();
   const alternatives = endpoint({
     method: "GET",
     path: path("/users"),
@@ -619,7 +619,7 @@ test("infers call input from path and request schema inputs", () => {
   });
   expectTypeOf<
     PathInput<typeof contract.path> & RequestInput<typeof contract.request>
-  >().toMatchTypeOf<{
+  >().toExtend<{
     params: { id: string };
     body: number;
   }>();
