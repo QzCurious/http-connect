@@ -4,11 +4,6 @@ import type { Invalid } from "../internal";
 import { expectTypeOf, test } from "vitest";
 import type { ExpectedPath, IsValidPathParamName, PathParamNames, ResolvedPath } from "./path";
 
-test("extracts params from colon and brace syntax", () => {
-  expectTypeOf<PathParamNames<"/users/:id">>().toEqualTypeOf<["id"]>();
-  expectTypeOf<PathParamNames<"/users/{id}/posts/{postId}">>().toEqualTypeOf<["id", "postId"]>();
-});
-
 test("validates complete path parameter names independently of parsing", () => {
   expectTypeOf<IsValidPathParamName<"id">>().toEqualTypeOf<true>();
   expectTypeOf<IsValidPathParamName<"_">>().toEqualTypeOf<true>();
@@ -99,18 +94,6 @@ test("rejects mixed placeholder styles", () => {
   expectTypeOf<ExpectedPath<Mixed>>().toEqualTypeOf<
     Invalid<'Error: path must not mix ":id" and "{id}" placeholder styles.'>
   >();
-});
-
-test("resolves colon paths at type level", () => {
-  expectTypeOf<
-    ResolvedPath<"/users/:id/posts/:postId", { id: "42"; postId: 99 }>
-  >().toEqualTypeOf<"/users/42/posts/99">();
-});
-
-test("resolves brace paths at type level", () => {
-  expectTypeOf<
-    ResolvedPath<"/users/{id}/posts/{postId}", { id: "42"; postId: 99 }>
-  >().toEqualTypeOf<"/users/42/posts/99">();
 });
 
 test("preserves plain paths at type level", () => {

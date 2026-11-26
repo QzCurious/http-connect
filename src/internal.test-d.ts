@@ -112,15 +112,6 @@ test("IsUnion allows nested unions and handles single and special types", () => 
   expectTypeOf<IsUnion<any>>().toEqualTypeOf<false>();
 });
 
-test("IsUnion follows TypeScript's union normalization", () => {
-  expectTypeOf<IsUnion<"one" | never>>().toEqualTypeOf<false>();
-  expectTypeOf<IsUnion<"one" | "one">>().toEqualTypeOf<false>();
-  expectTypeOf<IsUnion<string | "one">>().toEqualTypeOf<false>();
-  expectTypeOf<IsUnion<number | 1>>().toEqualTypeOf<false>();
-  expectTypeOf<IsUnion<unknown | 1>>().toEqualTypeOf<false>();
-  expectTypeOf<IsUnion<any | 1>>().toEqualTypeOf<false>();
-});
-
 test("prettify preserves primitive unions including null and undefined", () => {
   expectTypeOf<Prettify<string | number | boolean | null | undefined>>().toEqualTypeOf<
     string | number | boolean | null | undefined

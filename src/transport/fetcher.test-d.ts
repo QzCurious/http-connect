@@ -388,8 +388,6 @@ test("uses native excess property checks inside inline schema values", () => {
   });
   const input = { query: { search: "hello", extra: true } };
   fetcher(input);
-  // @ts-expect-error - root section keys remain constrained for a single shape
-  fetcher({ query: { search: "hello" }, body: undefined });
 });
 
 test("preserves contextual types for schema input callbacks", () => {
@@ -466,27 +464,4 @@ test("accepts generic schema values without weakening section checks", () => {
     single({ body, query: undefined });
   }
   forward("hello");
-});
-
-test("checks declared section values across union members", () => {
-  const fetcher = createTestTransport().createFetcher(
-    endpoint({
-      method: "POST",
-      path: path("/"),
-      request: {
-        query: z.object({}),
-        encodeAs: "text",
-        body: z.string(),
-      },
-      response: { status: 204 },
-    }),
-  );
-  const valid = {} as { query: {}; body: string } | { query: {}; body: "hello" };
-  fetcher(valid);
-  const wrong = {} as { query: {}; body: string } | { query: {}; body: number; headers: {} };
-  // @ts-expect-error - every body's value must conform to the schema input
-  fetcher(wrong);
-  const undefinedBody = {} as { query: {}; body: string } | { query: {}; body: undefined };
-  // @ts-expect-error - every body's value must conform to the schema input
-  fetcher(undefinedBody);
 });

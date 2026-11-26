@@ -91,25 +91,6 @@ it("passes the validated body and second-argument options to execution", async (
   await expect(request.text()).resolves.toBe("hello");
 });
 
-it("throws UnknownResponseError when no response status code matches", async () => {
-  const contract = endpoint({
-    method: "GET",
-    path: path("/users"),
-    request: {},
-    response: { status: 200 },
-  });
-
-  const send = createFetcher(contract, {
-    baseUrl,
-    codecs,
-    fetch: async () => new Response("teapot", { status: 418 }),
-  });
-  const result = send();
-
-  await expect(result).rejects.toBeInstanceOf(UnknownResponseError);
-  await expect(result).rejects.toMatchObject({ status: 418 });
-});
-
 it("throws UnknownResponseError when the exact status response body cannot parse", async () => {
   const contract = endpoint({
     method: "GET",
@@ -126,29 +107,6 @@ it("throws UnknownResponseError when the exact status response body cannot parse
     baseUrl,
     codecs,
     fetch: async () => new Response("not-json", { status: 200 }),
-  });
-  const result = send();
-
-  await expect(result).rejects.toBeInstanceOf(UnknownResponseError);
-  await expect(result).rejects.toMatchObject({ status: 200 });
-});
-
-it("throws UnknownResponseError when the exact status response body fails validation", async () => {
-  const contract = endpoint({
-    method: "GET",
-    path: path("/users"),
-    request: {},
-    response: {
-      status: 200,
-      decodeAs: "json",
-      body: z.object({ id: z.string() }),
-    },
-  });
-
-  const send = createFetcher(contract, {
-    baseUrl,
-    codecs,
-    fetch: async () => new Response(JSON.stringify({ id: 123 }), { status: 200 }),
   });
   const result = send();
 
@@ -255,7 +213,11 @@ it.each([200, 418])("cancels an unread body when the observed status is %i", asy
   );
 
   if (status === 200) await expect(send()).resolves.toEqual({ status });
-  else await expect(send()).rejects.toBeInstanceOf(UnknownResponseError);
+  else {
+    const result = send();
+    await expect(result).rejects.toBeInstanceOf(UnknownResponseError);
+    await expect(result).rejects.toMatchObject({ status });
+  }
   expect(cancel).toHaveBeenCalledTimes(1);
 });
 

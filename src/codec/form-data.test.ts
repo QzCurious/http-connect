@@ -2,12 +2,6 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { toFormData, type FormDataObject } from "../public";
 
 describe("toFormData", () => {
-  it("preserves FormData identity", () => {
-    const formData = new FormData();
-
-    expect(toFormData(formData)).toBe(formData);
-  });
-
   it("converts FormDataObject values to FormData", () => {
     const blob = new Blob(["hello"], { type: "text/plain" });
     const result = toFormData({

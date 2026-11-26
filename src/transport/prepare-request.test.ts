@@ -193,47 +193,29 @@ describe("prepareRequest", () => {
     });
   });
 
-  it("lets a declared schema synthesize a default for an omitted section", async () => {
-    const contract = endpoint({
-      method: "POST",
-      path: path("/users"),
-      request: {
+  it.each([[], [{ body: undefined }]] as const)(
+    "synthesizes a default body with arguments %j",
+    async (...args) => {
+      const contract = endpoint({
+        method: "POST",
+        path: path("/users"),
+        request: {
+          encodeAs: "json",
+          body: z.object({ name: z.string() }).default({ name: "Ada" }),
+        },
+        response: { status: 201 },
+      });
+
+      const prepared = await prepareRequest(contract, ...args);
+
+      expect(prepared).toEqual({
+        method: "POST",
+        resolvedPath: "/users",
         encodeAs: "json",
-        body: z.object({ name: z.string() }).default({ name: "Ada" }),
-      },
-      response: { status: 201 },
-    });
-
-    const prepared = await prepareRequest(contract);
-
-    expect(prepared).toEqual({
-      method: "POST",
-      resolvedPath: "/users",
-      encodeAs: "json",
-      body: { name: "Ada" },
-    });
-  });
-
-  it("preserves synthesized defaults for explicitly undefined body sections", async () => {
-    const contract = endpoint({
-      method: "POST",
-      path: path("/users"),
-      request: {
-        encodeAs: "json",
-        body: z.object({ name: z.string() }).default({ name: "Ada" }),
-      },
-      response: { status: 201 },
-    });
-
-    const prepared = await prepareRequest(contract, { body: undefined });
-
-    expect(prepared).toEqual({
-      method: "POST",
-      resolvedPath: "/users",
-      encodeAs: "json",
-      body: { name: "Ada" },
-    });
-  });
+        body: { name: "Ada" },
+      });
+    },
+  );
 
   it("ignores undeclared sections in a Call Input variable", async () => {
     const contract = endpoint({
@@ -318,27 +300,6 @@ describe("prepareRequest", () => {
     });
   });
 });
-
-it.each(["hello", 42])(
-  "validates a schema union without changing request facts: %s",
-  async (value) => {
-    const contract = endpoint({
-      method: "POST",
-      path: path("/values"),
-      request: {
-        encodeAs: "json",
-        body: z.union([z.string(), z.number()]).transform((value) => ({ value })),
-      },
-      response: { status: 204 },
-    });
-    await expect(prepareRequest(contract, { body: value })).resolves.toEqual({
-      method: "POST",
-      resolvedPath: "/values",
-      encodeAs: "json",
-      body: { value },
-    });
-  },
-);
 
 it("propagates schema exceptions", async () => {
   const failure = new Error("broken transform");

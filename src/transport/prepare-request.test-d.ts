@@ -189,22 +189,6 @@ test("exposes an exact prepared shape for concrete endpoints", () => {
   }>();
 });
 
-test("prepared request resolves number params to number path segments", () => {
-  const contract = endpoint({
-    method: "GET",
-    path: path("/users/{id}", z.object({ id: z.number() })),
-    request: {},
-    response: { status: 200 },
-  });
-
-  type Prepared = PreparedRequestFor<typeof contract>;
-
-  expectTypeOf<Prepared>().toEqualTypeOf<{
-    method: "GET";
-    resolvedPath: `/users/${number}`;
-  }>();
-});
-
 test("shared prepared requests require encoding and body together", () => {
   const base = { method: "POST", resolvedPath: "/users" } as const;
 

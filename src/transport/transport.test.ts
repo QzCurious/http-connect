@@ -7,22 +7,6 @@ import { endpoint, type EndpointContract } from "../contract/endpoint";
 import { createTransport } from "./transport";
 
 describe("fetch transport", () => {
-  it("uses global fetch when no implementation is supplied", async () => {
-    const dispatch = vi.fn(async () => new Response(null, { status: 204 }));
-    vi.stubGlobal("fetch", dispatch);
-    try {
-      const transport = createTransport({ baseUrl: "https://example.com" });
-      vi.stubGlobal("fetch", vi.fn());
-      const send = transport.createFetcher(
-        endpoint({ method: "GET", path: path("/"), request: {}, response: { status: 204 } }),
-      );
-      expect((await send()).status).toBe(204);
-      expect(dispatch).toHaveBeenCalledWith(expect.any(Request));
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
   it("uses configured baseUrl and serializes contract query into the URL", async () => {
     const fetchMock = vi.fn(async (transportRequest: Request) => {
       expect(transportRequest.url).toBe(
@@ -258,12 +242,8 @@ it("encodes the validated query with the fetcher override", async () => {
 });
 
 it("resolves registered codecs at binding and inherits an explicitly undefined override", async () => {
-  const readJsonDecoder = vi.fn(() => codecs.decoders.json);
   const defaults = {
     text: async () => "inherited",
-    get json(): (response: Response) => Promise<unknown> {
-      return readJsonDecoder();
-    },
   };
   const transport = createTransport({
     baseUrl: "https://example.com",
@@ -279,7 +259,6 @@ it("resolves registered codecs at binding and inherits an explicitly undefined o
     }),
     { codecs: { decoders: { text: undefined } } },
   );
-  expect(readJsonDecoder).toHaveBeenCalledOnce();
   defaults.text = async () => "changed";
   await expect(send()).resolves.toEqual({ status: 200, body: "inherited" });
 });

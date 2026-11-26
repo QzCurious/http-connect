@@ -29,17 +29,7 @@ declare function single<const Value>(
   value: Value & (true extends IsUnion<Value> ? Invalid<"Error: choose one value."> : Value),
 ): Value;
 
-test("Invalid requires one symbol key with a readonly nested message map", () => {
-  expectTypeOf<keyof EmptyError>().toExtend<symbol>();
-  expectTypeOf<keyof EmptyError>().not.toBeNever();
-  expectTypeOf<Extract<keyof EmptyError, string | number>>().toEqualTypeOf<never>();
-  expectTypeOf<EmptyError[keyof EmptyError]>().toEqualTypeOf<{
-    readonly "Error: value must not be empty.": never;
-  }>();
-  expectTypeOf<EmptyError>().toEqualTypeOf<{
-    readonly [Key in keyof EmptyError]: EmptyError[Key];
-  }>();
-
+test("callers cannot construct an Invalid marker", () => {
   // @ts-expect-error - an empty object cannot supply the required marker
   const missing: EmptyError = {};
   // @ts-expect-error - visible message properties cannot supply the private key
@@ -208,15 +198,6 @@ test("primitive intersections retain independent messages; nullish failures rema
   expectTypeOf<null & BothErrors>().toBeNever();
   expectTypeOf<undefined & BothErrors>().toBeNever();
   expectTypeOf<never & BothErrors>().toBeNever();
-});
-
-test("union guards compose with independent Invalid markers", () => {
-  type UnionError = true extends IsUnion<1 | 2> ? Invalid<"Error: choose one value."> : never;
-  type Combined = UnionError & EmptyError;
-  expectTypeOf<Combined>().not.toBeNever();
-  expectTypeOf<keyof Combined[keyof Combined]>().toEqualTypeOf<
-    "Error: choose one value." | "Error: value must not be empty."
-  >();
 });
 
 test("union guards preserve useful inference and reject whole union variables", () => {

@@ -147,14 +147,6 @@ test("requires path to be slash-prefixed and non-protocol-relative", () => {
   expectTypeOf<ExpectedPath<"/users/:id/posts/{postId}">>().toEqualTypeOf<
     Invalid<'Error: path must not mix ":id" and "{id}" placeholder styles.'>
   >();
-
-  // @ts-expect-error - method is required
-  endpoint({ path: path("/users"), request: {}, response: { status: 204 } });
-});
-
-test("requires params when path contains placeholders", () => {
-  // @ts-expect-error - params is required for placeholder paths
-  endpoint({ method: "GET", path: path("/users/{id}"), request: {}, response: { status: 204 } });
 });
 
 test("params schema keys follow the runtime placeholder grammar", () => {

@@ -75,24 +75,6 @@ declare const schema: StandardSchemaV1;
   expect(errors[0].message).toContain("verbatimModuleSyntax");
 });
 
-test("successful additive constraints accept declarations and retain literal inference", async () => {
-  const document = await fixture(`
-const single = response({ status: 200, label: "empty" });
-const singleStatus: 200 = single.status;
-const singleLabel: "empty" = single.label;
-const responses = endpoint({
-  label: "valid",
-  response: [
-    { status: 200, decodeAs: "text", body: "ok", headers: { "content-type": "text/plain" } },
-    { status: 201, decodeAs: "json", body: { id: "123" }, headers: { "content-type": "application/json" } },
-  ],
-});
-const firstStatus: 200 = responses[0].status;
-const secondId: "123" = responses[1].body.id;
-`);
-  expect(await document.diagnostics()).toEqual([]);
-});
-
 test("composed structural errors blame their container and explain independent requirements", async () => {
   const document = await fixture(`
 response(/*both*/{

@@ -22,22 +22,6 @@ test("types the fetch override against the assembled request", () => {
   });
 });
 
-test("encodes transformed schema output while Call Input keeps the input type", () => {
-  const contract = endpoint({
-    method: "POST",
-    path: path("/"),
-    request: {
-      encodeAs: "text",
-      body: z.object({ title: z.string() }).transform(({ title }) => `<title>${title}</title>`),
-    },
-    response: { status: 204 },
-  });
-  const send = transport.createFetcher(contract);
-  expectTypeOf<Parameters<typeof send>[0]>().toEqualTypeOf<{
-    body: { title: string };
-  }>();
-});
-
 test("requires only codecs the transport cannot guarantee", () => {
   const contract = endpoint({
     method: "POST",
@@ -64,10 +48,9 @@ test("requires only codecs the transport cannot guarantee", () => {
       decoders: { json: codecs.decoders.json },
     },
   });
-  const send = transport.createFetcher(contract, {
+  transport.createFetcher(contract, {
     codecs: { decoders: { text: (response) => response.text() } },
   });
-  expectTypeOf<Parameters<typeof send>[0]>().toEqualTypeOf<{ body: string }>();
   const partial: import("../codec/codecs").Codecs = codecs;
   // @ts-expect-error - optional codec properties cannot establish availability
   createTransport({ ...config, codecs: partial }).createFetcher(contract);

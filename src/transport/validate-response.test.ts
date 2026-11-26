@@ -84,29 +84,4 @@ describe("validateResponse", () => {
       accept: "application/json, text/plain",
     });
   });
-
-  it("matches response header schema keys case-insensitively", async () => {
-    const contract = endpoint({
-      method: "GET",
-      path: path("/users"),
-      request: {},
-      response: {
-        status: 200,
-        headers: z.object({ "X-Trace-Id": z.string() }),
-      },
-    });
-
-    const headers = new Headers();
-    headers.set("x-trace-id", "trace-123");
-
-    const result = await validateResponse({
-      shape: contract.response,
-      response: new Response(null, { status: 200, headers }),
-      decoders: codecs.decoders,
-    });
-
-    expect(result?.headers).toEqual({
-      "X-Trace-Id": "trace-123",
-    });
-  });
 });

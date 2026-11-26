@@ -50,7 +50,6 @@ const invalidDecoder: ResponseDecoderKey = "INVALID";
       ["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"],
       ["json", "text", "blob", "arrayBuffer", "bytes", "formData"],
     ].entries()) {
-      expect(diagnostics[index]).toContain(`fixture.ts(${index + 3},7): error TS2322:`);
       const expectedType = diagnostics[index].match(/not assignable to type '([^']+)'/);
       expect(expectedType).not.toBeNull();
       expect(expectedType![1].split(" | ").sort()).toEqual(

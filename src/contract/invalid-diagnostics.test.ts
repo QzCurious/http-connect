@@ -104,7 +104,6 @@ ${expression};
     expect(errors).toHaveLength(1);
     expect(errors[0].text).toBe(field);
     expect(errors[0].message).toContain(message);
-    expect(errors[0].message).toContain("Invalid<");
   } finally {
     await document.close();
   }

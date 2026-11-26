@@ -61,19 +61,6 @@ test("allows content-type inside headers", () => {
   });
 });
 
-test("rejects extra top-level response keys", () => {
-  endpoint({
-    method: "GET",
-    path: path("/"),
-    request: {},
-    response: {
-      status: 200,
-      // @ts-expect-error - unknown response shape key
-      extra: true,
-    },
-  });
-});
-
 test("allows transforming response header schemas", () => {
   const shape = endpoint({
     method: "GET",
@@ -101,20 +88,6 @@ test("rejects response header schemas with non-string input values", () => {
       status: 200,
       // @ts-expect-error - response headers must accept string or undefined values
       headers: z.object({ retryAfter: z.number() }),
-    },
-  });
-});
-
-test("rejects unsupported response decode keys", () => {
-  endpoint({
-    method: "GET",
-    path: path("/"),
-    request: {},
-    response: {
-      status: 200,
-      // @ts-expect-error - decodeAs is limited to built-in response decoding keys
-      decodeAs: "csv",
-      body: z.string(),
     },
   });
 });

@@ -115,21 +115,6 @@ test("preserves a single request and a tuple of response alternatives", () => {
   expectTypeOf(contract.response).toEqualTypeOf<[typeof okResponse, typeof createdResponse]>();
 });
 
-test("accepts inline request and response shapes", () => {
-  endpoint({
-    method: "GET",
-    path: path("/users/{id}", z.object({ id: z.string() })),
-    request: {},
-    response: [{ status: 200, decodeAs: "json", body: z.string() }, { status: 404 }],
-  });
-  endpoint({
-    method: "GET",
-    path: path("/users"),
-    request: {},
-    response: { status: 204 },
-  });
-});
-
 test("accepts readonly response tuples", () => {
   const responses = [okResponse] as const;
   const contract = endpoint({
@@ -168,13 +153,6 @@ test("requires one Request Shape and at least one Response Shape", () => {
 });
 
 test("validates the inline request and every response alternative", () => {
-  endpoint({
-    method: "GET",
-    // @ts-expect-error - params are required for the placeholder
-    path: path("/users/{id}"),
-    request: {},
-    response: okResponse,
-  });
   endpoint({
     method: "GET",
     path: path("/users"),

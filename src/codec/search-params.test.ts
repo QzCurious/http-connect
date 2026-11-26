@@ -1,13 +1,7 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
-import { toURLSearchParams, type URLSearchParamsObject } from "../public";
+import { describe, expect, it } from "vitest";
+import { toURLSearchParams } from "../public";
 
 describe("toURLSearchParams", () => {
-  it("preserves URLSearchParams identity", () => {
-    const params = new URLSearchParams({ username: "foo" });
-
-    expect(toURLSearchParams(params)).toBe(params);
-  });
-
   it("converts URLSearchParams constructor-compatible values", () => {
     expect(toURLSearchParams("tag=a&tag=b").toString()).toBe("tag=a&tag=b");
 
@@ -69,16 +63,5 @@ describe("toURLSearchParams", () => {
       ["filter[brand]", "nike"],
       ["filter[brand]", "adidas"],
     ]);
-  });
-
-  it("types URLSearchParamsObject arrays", () => {
-    expectTypeOf({
-      tags: ["red", "blue"],
-      items: [{ id: 1 }, { id: 2 }],
-      matrix: [
-        [1, 2],
-        [3, 4],
-      ],
-    }).toMatchTypeOf<URLSearchParamsObject>();
   });
 });

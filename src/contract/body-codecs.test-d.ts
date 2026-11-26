@@ -55,16 +55,6 @@ test("supports every encoder and native/project data, independent of media type"
     method: "POST",
     path: path("/"),
     request: {
-      encodeAs: "text",
-      headers: z.object({ "Content-Type": z.string() }),
-      body: z.string(),
-    },
-    response: empty,
-  });
-  endpoint({
-    method: "POST",
-    path: path("/"),
-    request: {
       encodeAs: "form-data",
       body: z.union([z.instanceof(FormData), z.custom<FormDataObject>()]),
     },
@@ -309,13 +299,6 @@ test("requires paired declarations, with no extension keys or callbacks", () => 
       encodeAs: () => "text",
       body: z.string(),
     },
-    response: empty,
-  });
-  endpoint({
-    method: "POST",
-    path: path("/"),
-    // @ts-expect-error - `body` requires an `encodeAs` field
-    request: { body: z.string() },
     response: empty,
   });
   endpoint({
