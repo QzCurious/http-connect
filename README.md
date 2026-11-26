@@ -4,10 +4,16 @@
 
 ## Quick start
 
+Install the library and Zod for this example.
+
+```sh
+npm install @qzcurious/http-connect zod
+```
+
 Read a todo from JSONPlaceholder using Zod and a runtime with Fetch support.
 
 ```ts
-import { codecs, createTransport, endpoint, path } from "http-connect";
+import { codecs, createTransport, endpoint, path } from "@qzcurious/http-connect";
 import { z } from "zod";
 
 const api = createTransport({ baseUrl: "https://jsonplaceholder.typicode.com", codecs });
@@ -34,7 +40,7 @@ This calls `GET /todos/1` and prints its title after validating the JSON respons
 Suppose `GET /workspaces/:workspaceId/notes` returns a JSON list of notes, or a JSON error when the workspace is missing. The following example uses Zod for validation and a fetch-compatible runtime. Replace the example origin with your API’s origin.
 
 ```ts
-import { codecs, createTransport, endpoint, path, type CallInput } from "http-connect";
+import { codecs, createTransport, endpoint, path, type CallInput } from "@qzcurious/http-connect";
 import { z } from "zod";
 
 const transport = createTransport({
@@ -118,7 +124,7 @@ Other request encodings include `text`, `form-urlencoded`, `form-data`, `binary`
 
 ## Handle failures
 
-A declared HTTP error such as the 404 above is a normal result when its schema matches. Use the error classes exported by `http-connect` to distinguish invalid input from an unexpected response.
+A declared HTTP error such as the 404 above is a normal result when its schema matches. Use the error classes exported by `@qzcurious/http-connect` to distinguish invalid input from an unexpected response.
 
 | Outcome | What the caller receives |
 | --- | --- |

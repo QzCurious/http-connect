@@ -1,6 +1,10 @@
 {
-  "name": "http-connect",
+  "name": "@qzcurious/http-connect",
   "version": "0.0.0",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist"
   ],
