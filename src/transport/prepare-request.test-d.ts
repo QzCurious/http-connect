@@ -75,6 +75,8 @@ test("exposes transformed prepared output when schema input accepts undefined", 
     resolvedPath: "/users";
     encodeAs: "json";
     body: { name: string } | null;
+    query?: never;
+    headers?: never;
   }>();
 });
 
@@ -123,8 +125,10 @@ test("uses request schema input for call input and output for prepared request",
     };
     headers: {
       authorization: string;
-      retryAfter: number;
+      retryafter: string;
     };
+    encodeAs?: never;
+    body?: never;
   }>();
 });
 
@@ -158,6 +162,8 @@ test("preserves rich call input types while preparing transport-compatible outpu
     resolvedPath: `/users/${number}`;
     query: { since: string };
     headers: { authorization: string };
+    encodeAs?: never;
+    body?: never;
   }>();
   expectTypeOf<PreparedRequestFor<typeof contract>>().toExtend<PreparedRequest>();
 });
@@ -186,6 +192,10 @@ test("exposes an exact prepared shape for concrete endpoints", () => {
   expectTypeOf<Prepared>().toEqualTypeOf<{
     method: "GET";
     resolvedPath: `/users/${string}`;
+    query?: never;
+    headers?: never;
+    encodeAs?: never;
+    body?: never;
   }>();
 });
 
@@ -247,6 +257,8 @@ test("schema unions preserve call input and transformed prepared body types", ()
     resolvedPath: "/values";
     encodeAs: "json";
     body: { value: string | number };
+    query?: never;
+    headers?: never;
   }>();
 });
 
@@ -284,5 +296,7 @@ test("preserves encoding without inventing an omitted content type", () => {
     resolvedPath: "/";
     encodeAs: "text";
     body: string;
+    query?: never;
+    headers?: never;
   }>();
 });

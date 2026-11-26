@@ -12,7 +12,7 @@ The application-facing lifecycle is:
 4. Fetcher Execution: Call Input fills the variable request parts and becomes a Prepared Request.
 5. Runtime Result: the configured fetch function returns an observed HTTP response, which the transport module validates against the exact-status Response Shape.
 
-Execution turns an internal Prepared Request into a Web Platform `Request` for the configured fetch function.
+Every fetcher exposes `prepare`. Call it with the declared input sections, or with zero arguments when the endpoint has none. It can execute the resulting Prepared Request with `execute(prepared, options?)`. Calling the fetcher directly combines both steps.
 
 ## Source And Interface Boundary
 

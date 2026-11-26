@@ -21,6 +21,15 @@ describe("createFetcher", () => {
       { baseUrl, codecs, fetch },
     );
 
+    const prepared = await fetcher.prepare();
+    expect(prepared).toEqual({ method: "GET", resolvedPath: "/health" });
+    expect(fetch).not.toHaveBeenCalled();
+    await expect(fetcher.execute(prepared)).resolves.toEqual({ status: 204 });
+    expect(fetch).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ method: "GET", url: baseUrl + "/health" }),
+    );
+    fetch.mockClear();
+
     await expect(fetcher({ cache: "no-store" })).resolves.toEqual({
       status: 204,
     });

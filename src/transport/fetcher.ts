@@ -1,7 +1,7 @@
 import type { EndpointContract } from "../contract/endpoint";
 import type { RequiredCodecs } from "../codec/codecs";
 import type { CallInput } from "./call-input";
-import { prepareRequest, type PreparedRequest } from "./prepare-request";
+import { prepareRequest, type PreparedRequest, type PreparedRequestFor } from "./prepare-request";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { DefinedField, Prettify } from "../internal";
 import type { TransportConfig } from "./transport";
@@ -11,10 +11,17 @@ export type FetchOptions = Omit<RequestInit, "method" | "headers" | "body" | "du
 
 type KeysOfUnion<T> = T extends unknown ? keyof T : never;
 
-export type Fetcher<Endpoint extends EndpointContract> =
-  KeysOfUnion<CallInput<Endpoint>> extends never
-    ? (options?: FetchOptions) => Promise<RuntimeResult<Endpoint>>
-    : (input: CallInput<Endpoint>, options?: FetchOptions) => Promise<RuntimeResult<Endpoint>>;
+type InputArgs<Endpoint extends EndpointContract> =
+  KeysOfUnion<CallInput<Endpoint>> extends never ? [] : [input: CallInput<Endpoint>];
+
+export type Fetcher<Endpoint extends EndpointContract> = {
+  (...args: [...InputArgs<Endpoint>, options?: FetchOptions]): Promise<RuntimeResult<Endpoint>>;
+  prepare(...args: InputArgs<Endpoint>): Promise<PreparedRequestFor<Endpoint>>;
+  execute(
+    prepared: PreparedRequestFor<Endpoint>,
+    options?: FetchOptions,
+  ): Promise<RuntimeResult<Endpoint>>;
+};
 
 export function createFetcher<const Endpoint extends EndpointContract>(
   endpoint: Endpoint,
@@ -33,14 +40,23 @@ export function createFetcher<const Endpoint extends EndpointContract>(
     shape.headers !== undefined ||
     shape.body !== undefined;
 
+  function prepare(input?: CallInput<Endpoint>) {
+    return prepareRequest(endpoint, input);
+  }
+
   async function fetcher(...rawArgs: unknown[]): Promise<RuntimeResult<Endpoint>> {
     const callInput = hasCallInput ? (rawArgs[0] as CallInput<Endpoint> | undefined) : undefined;
     const options = (hasCallInput ? rawArgs[1] : rawArgs[0]) as FetchOptions | undefined;
 
-    const preparedRequest: PreparedRequest = await prepareRequest(endpoint, callInput);
+    return execute(await prepare(callInput), options);
+  }
 
+  async function execute(
+    preparedRequest: PreparedRequest,
+    options?: FetchOptions,
+  ): Promise<RuntimeResult<Endpoint>> {
     const url = new URL(preparedRequest.resolvedPath, baseUrl);
-    if (preparedRequest.query && encoders.query) {
+    if (preparedRequest.query !== undefined && encoders.query) {
       url.search = encoders.query(preparedRequest.query).toString();
     }
 
@@ -71,18 +87,14 @@ export function createFetcher<const Endpoint extends EndpointContract>(
     }
   }
 
-  return fetcher as Fetcher<Endpoint>;
+  return Object.assign(fetcher, { prepare, execute }) as Fetcher<Endpoint>;
 }
 
 function normalizeHeaders(preparedRequest: PreparedRequest): Headers {
-  const headers = new Headers();
-  for (const [name, value] of Object.entries(preparedRequest.headers ?? {})) {
-    if (value === undefined) continue;
-    if (preparedRequest.encodeAs === "form-data" && name.toLowerCase() === "content-type") {
-      console.warn("Ignoring supplied Content-Type because Fetch generates the form-data boundary.");
-      continue;
-    }
-    headers.set(name, String(value));
+  const headers = new Headers(preparedRequest.headers);
+  if (preparedRequest.encodeAs === "form-data" && headers.has("content-type")) {
+    console.warn("Ignoring supplied Content-Type because Fetch generates the form-data boundary.");
+    headers.delete("content-type");
   }
   if (preparedRequest.encodeAs === "json" && !headers.has("content-type")) {
     headers.set("content-type", "application/json");

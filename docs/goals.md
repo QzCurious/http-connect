@@ -32,7 +32,7 @@ The product should stay legible by centering one explicit executable path:
 - Fetcher Execution: `transport.createFetcher(endpoint)` binds a compatible Endpoint Contract to its Transport
 - Runtime Result: structured validation outcome for observed HTTP responses
 
-Execution validates Call Input and constructs a Web Platform `Request` from the internal Prepared Request.
+Preparation validates Call Input. Execution constructs a Web Platform `Request` from the Prepared Request.
 
 The `http-connect` package entry point exposes Endpoint Contract authoring, HTTP Codecs, and the Fetch transport.
 

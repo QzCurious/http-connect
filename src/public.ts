@@ -13,7 +13,11 @@ export {
   type RequestInput,
 } from "./transport/call-input";
 export { UnknownResponseError, type RuntimeResult } from "./transport/fetcher";
-export { prepareRequest } from "./transport/prepare-request";
+export {
+  prepareRequest,
+  type PreparedRequest,
+  type PreparedRequestFor,
+} from "./transport/prepare-request";
 export { validateResponse } from "./transport/validate-response";
 export { resolvePath } from "./transport/resolve-path";
 

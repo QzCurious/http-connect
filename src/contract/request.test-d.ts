@@ -529,12 +529,13 @@ test("rejects body outputs incompatible with the selected encoder", () => {
   });
 });
 
-test("allows form-urlencoded request body output shapes", () => {
+test("rejects form-urlencoded outputs that include native representations", () => {
   const shape = endpoint({
     method: "POST",
     path: path("/"),
     request: {
       encodeAs: "form-urlencoded",
+      // @ts-expect-error - every output must be a structured form object
       body: z.union([
         z.instanceof(URLSearchParams),
         z.string(),
@@ -554,9 +555,7 @@ test("requires custom URL-encoded input to transform into a supported representa
       encodeAs: "form-urlencoded",
       body: z
         .custom<Iterable<readonly [string, string]>>()
-        .transform(
-          (entries) => new URLSearchParams(Array.from(entries, ([key, value]) => [key, value])),
-        ),
+        .transform((entries) => Object.fromEntries(entries)),
     },
     response: { status: 204 },
   });

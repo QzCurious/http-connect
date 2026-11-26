@@ -1,3 +1,4 @@
+import type { RequestEncoderInputMap } from "../codec/codecs";
 import { resolvePath } from "./resolve-path";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { URLSearchParamsObject } from "../codec/search-params";
@@ -29,7 +30,7 @@ export async function prepareRequest<const Contract extends EndpointContract>(
     query = result.value as URLSearchParamsObject;
   }
 
-  let headers: RequestHeaders | undefined;
+  let headers: Record<string, string> | undefined;
   if (shape.headers !== undefined) {
     const result = await shape.headers["~standard"].validate(input.headers);
 
@@ -37,7 +38,11 @@ export async function prepareRequest<const Contract extends EndpointContract>(
       throw new CallInputValidationError("headers", result.issues);
     }
 
-    headers = result.value as RequestHeaders;
+    headers = Object.fromEntries(
+      Object.entries(result.value as RequestHeaders)
+        .filter(([, value]) => value !== undefined)
+        .map(([name, value]) => [name.toLowerCase(), String(value)]),
+    );
   }
 
   let preparedBody: PreparedRequestBody = {};
@@ -48,18 +53,15 @@ export async function prepareRequest<const Contract extends EndpointContract>(
       throw new CallInputValidationError("body", result.issues);
     }
 
-    preparedBody = {
-      encodeAs: shape.encodeAs,
-      body: result.value,
-    };
+    preparedBody = { encodeAs: shape.encodeAs, body: result.value } as PreparedRequestBody;
   }
 
   const preparedRequest: PreparedRequest = {
+    method: endpoint.method,
+    resolvedPath,
     ...(shape.query !== undefined ? { query } : {}),
     ...(shape.headers !== undefined ? { headers } : {}),
     ...preparedBody,
-    method: endpoint.method,
-    resolvedPath,
   };
 
   return preparedRequest as PreparedRequestFor<Contract>;
@@ -73,12 +75,20 @@ export type PreparedRequest = {
   readonly method: EndpointContract["method"];
   readonly resolvedPath: string;
   readonly query?: URLSearchParamsObject;
-  readonly headers?: RequestHeaders;
+  readonly headers?: Readonly<Record<string, string>>;
 } & PreparedRequestBody;
 
 type PreparedRequestBody =
   | {
-      readonly encodeAs: RequestEncoderKey;
+      readonly encodeAs: "form-data";
+      readonly body: RequestEncoderInputMap["form-data"];
+    }
+  | {
+      readonly encodeAs: "form-urlencoded";
+      readonly body: RequestEncoderInputMap["form-urlencoded"];
+    }
+  | {
+      readonly encodeAs: Exclude<RequestEncoderKey, "form-data" | "form-urlencoded">;
       readonly body: unknown;
     }
   | {
@@ -96,22 +106,31 @@ type ExactPreparedQuery<Request extends RequestShape> = Request extends {
   query: StandardSchemaV1;
 }
   ? { query: StandardSchemaV1.InferOutput<Request["query"]> }
-  : {};
+  : { query?: never };
+
+type PreparedHeaders<Headers> = Prettify<
+  {
+    [K in keyof Headers as undefined extends Headers[K] ? never : Lowercase<K & string>]: string;
+  } & {
+    [K in keyof Headers as undefined extends Headers[K] ? Lowercase<K & string> : never]?: string;
+  }
+>;
 
 type ExactPreparedHeaders<Request extends RequestShape> = Request extends {
   headers: StandardSchemaV1;
 }
-  ? { headers: StandardSchemaV1.InferOutput<Request["headers"]> }
-  : {};
+  ? { headers: PreparedHeaders<StandardSchemaV1.InferOutput<Request["headers"]>> }
+  : { headers?: never };
+
+type PreparedBodyForEncoding<Encoding, Output> = Encoding extends "form-data" | "form-urlencoded"
+  ? { encodeAs: Encoding; body: unknown extends Output ? RequestEncoderInputMap[Encoding] : Output }
+  : { encodeAs: Encoding; body: Output };
 
 type ExactPreparedBody<Request extends RequestShape> = Request extends {
   body: StandardSchemaV1;
 }
-  ? {
-      encodeAs: Request["encodeAs"];
-      body: StandardSchemaV1.InferOutput<Request["body"]>;
-    }
-  : {};
+  ? PreparedBodyForEncoding<Request["encodeAs"], StandardSchemaV1.InferOutput<Request["body"]>>
+  : { encodeAs?: never; body?: never };
 
 type ExactPreparedRequest<
   Contract extends EndpointContract,

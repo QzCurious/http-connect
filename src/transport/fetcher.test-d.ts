@@ -5,7 +5,8 @@ import { expectTypeOf, test, vi } from "vitest";
 import { z } from "zod";
 import { endpoint, type EndpointContract } from "../contract/endpoint";
 import { type HttpStatusCode } from "../contract/response";
-import { createFetcher, type FetchOptions } from "./fetcher";
+import { createFetcher, type FetchOptions, type Fetcher } from "./fetcher";
+import type { PreparedRequestFor } from "./prepare-request";
 import { createTransport } from "./transport";
 
 function createTestTransport() {
@@ -83,6 +84,15 @@ test("does not require call input when the endpoint declares no sections", () =>
     }),
   );
 
+  expectTypeOf(fetcher.prepare).parameters.toEqualTypeOf<[]>();
+  expectTypeOf(fetcher.prepare).returns.resolves.toEqualTypeOf<{
+    method: "GET";
+    resolvedPath: "/health";
+    query?: never;
+    headers?: never;
+    encodeAs?: never;
+    body?: never;
+  }>();
   expectTypeOf<Extract<Awaited<ReturnType<typeof fetcher>>, Error>>().toEqualTypeOf<never>();
   expectTypeOf<Parameters<typeof fetcher>>().toEqualTypeOf<[options?: FetchOptions]>();
 });
@@ -97,9 +107,61 @@ test("requires call input when the endpoint declares sections", () => {
     }),
   );
 
+  expectTypeOf(fetcher.prepare).parameters.toEqualTypeOf<[input: { params: { id: string } }]>();
+  type Prepared = Awaited<ReturnType<typeof fetcher.prepare>>;
+  expectTypeOf<Prepared>().toEqualTypeOf<{
+    method: "GET";
+    resolvedPath: `/users/${string}`;
+    query?: never;
+    headers?: never;
+    encodeAs?: never;
+    body?: never;
+  }>();
+  expectTypeOf(fetcher.execute).toBeCallableWith({ method: "GET", resolvedPath: "/users/1" });
+  expectTypeOf(fetcher.execute).returns.toEqualTypeOf<ReturnType<typeof fetcher>>();
   expectTypeOf<Parameters<typeof fetcher>>().toEqualTypeOf<
     [input: { params: { id: string } }, options?: FetchOptions]
   >();
+});
+
+test("a generic fetcher can execute its prepared request", () => {
+  function replay<E extends EndpointContract>(
+    fetcher: Fetcher<E>,
+    prepared: PreparedRequestFor<E>,
+  ) {
+    return fetcher.execute(prepared);
+  }
+  expectTypeOf(replay).toBeFunction();
+});
+
+test("execute accepts only sections declared by the receiving endpoint", async () => {
+  const route = { method: "POST", path: path("/search"), response: { status: 204 } } as const;
+  const transport = createTestTransport();
+  const plain = transport.createFetcher(endpoint({ ...route, request: {} }));
+  const withBody = endpoint({
+    ...route,
+    request: { encodeAs: "json", body: z.object({ term: z.string() }) },
+  });
+  const withQuery = endpoint({ ...route, request: { query: z.object({ term: z.string() }) } });
+  const withHeaders = endpoint({ ...route, request: { headers: z.object({ lang: z.string() }) } });
+
+  const body = await transport.createFetcher(withBody).prepare({ body: { term: "cats" } });
+  const query = await transport.createFetcher(withQuery).prepare({ query: { term: "cats" } });
+  const headers = await transport.createFetcher(withHeaders).prepare({ headers: { lang: "en" } });
+  plain.execute({ method: "POST", resolvedPath: "/search" });
+  // @ts-expect-error - the receiving endpoint declares no body or encoding
+  plain.execute(body);
+  // @ts-expect-error - the receiving endpoint declares no query
+  plain.execute(query);
+  // @ts-expect-error - the receiving endpoint declares no headers
+  plain.execute(headers);
+
+  const either = transport.createFetcher(Math.random() < 0.5 ? withBody : withQuery);
+  either.execute(body);
+  either.execute(query);
+  const combined = { ...body, ...query };
+  // @ts-expect-error - neither endpoint declares both sections
+  either.execute(combined);
 });
 
 test("requires call input when declared section values may be undefined", () => {

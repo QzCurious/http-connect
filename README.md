@@ -95,6 +95,22 @@ if (result.status === 200) {
 
 This sends `GET /workspaces/acme/notes?page=1` with the header `accept-language: en`. Checking `result.status` narrows the body type to the schema for that status. You can define endpoints beside the features that use them and bind each to the same transport.
 
+## Use a prepared request as a TanStack Query key
+
+In an async loader, prepare the request before giving TanStack Query its options. Both the key and the query function use the same validated value.
+
+```ts
+const prepared = await listNotes.prepare(input);
+const result = await queryClient.fetchQuery({
+  queryKey: ["notes", prepared],
+  queryFn: ({ signal }) => listNotes.execute(prepared, { signal }),
+});
+```
+
+Preparation resolves the path, normalizes headers, and preserves the inferred query and body schema outputs. URL-encoded and multipart form schemas produce structured objects such as `{ tag: ["a", "b"] }`. Execution applies the configured encoders, constructs a fresh `Request`, and validates the response. For an endpoint without input sections, use `await fetcher.prepare()` to obtain the prepared request or `await fetcher()` to send it directly.
+
+Use this key pattern for plain-data requests. Use JSON-safe field values, including finite numbers and arrays without undefined elements. Files, binary bodies, and streams are outside its scope. Prepared headers appear in the key. For authenticated requests, supply credentials through the configured fetch function and include a stable account scope in the key when results depend on the account.
+
 ## Send a request body
 
 To create a note on the same route, declare a POST endpoint. Pair the body schema with `encodeAs` to choose how the transport serializes the validated value.

@@ -2,7 +2,6 @@ import { path } from "./path";
 import { expectTypeOf, test } from "vitest";
 import { z } from "zod";
 import { endpoint, type FormDataObject, type URLSearchParamsObject } from "../public";
-import type { URLSearchParamsNativeInput } from "../codec/search-params";
 
 const empty = { status: 204 } as const;
 
@@ -56,7 +55,7 @@ test("supports every encoder and native/project data, independent of media type"
     path: path("/"),
     request: {
       encodeAs: "form-data",
-      body: z.union([z.instanceof(FormData), z.custom<FormDataObject>()]),
+      body: z.custom<FormDataObject>(),
     },
     response: empty,
   });
@@ -65,11 +64,7 @@ test("supports every encoder and native/project data, independent of media type"
     path: path("/"),
     request: {
       encodeAs: "form-urlencoded",
-      body: z.union([
-        z.instanceof(URLSearchParams),
-        z.custom<URLSearchParamsNativeInput>(),
-        z.custom<URLSearchParamsObject>(),
-      ]),
+      body: z.custom<URLSearchParamsObject>(),
     },
     response: empty,
   });
@@ -310,6 +305,19 @@ test("requires paired declarations, with no extension keys or callbacks", () => 
   });
 });
 
+test("rejects a native FormData body schema output", () => {
+  endpoint({
+    method: "POST",
+    path: path("/"),
+    request: {
+      encodeAs: "form-data",
+      // @ts-expect-error - multipart body schemas must produce a structured object
+      body: z.instanceof(FormData),
+    },
+    response: empty,
+  });
+});
+
 test("reserves Content-Type only for form-data", () => {
   endpoint({
     method: "POST",
@@ -318,7 +326,7 @@ test("reserves Content-Type only for form-data", () => {
       encodeAs: "form-data",
       // @ts-expect-error - `form-data` generates `Content-Type` with its multipart boundary
       headers: z.object({ "CoNtEnT-TyPe": z.string() }),
-      body: z.instanceof(FormData),
+      body: z.object({ title: z.string() }),
     },
     response: empty,
   });
@@ -375,7 +383,7 @@ test("rejects reserved headers in every schema output alternative", () => {
     path: path("/"),
     request: {
       encodeAs: "form-data",
-      body: z.instanceof(FormData),
+      body: z.object({ title: z.string() }),
       // @ts-expect-error - every header schema union member must omit `Content-Type` for `form-data`
       headers,
     },

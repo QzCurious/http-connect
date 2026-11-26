@@ -1,5 +1,6 @@
+import { QueryClient } from "@tanstack/query-core";
 import { codecs } from "../codec/codecs";
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { describe, expect, expectTypeOf, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 import { path, endpoint } from "../public";
 import { createTransport } from "./transport";
@@ -80,7 +81,7 @@ describe("contract request encodings", () => {
         ...facts,
         request: {
           encodeAs: "form-urlencoded",
-          body: z.instanceof(URLSearchParams),
+          body: z.instanceof(URLSearchParams).transform((params) => ({ a: params.getAll("a") })),
         },
         response: { status: 204 },
       }),
@@ -232,7 +233,7 @@ describe("contract request encodings", () => {
           encodeAs: "form-data",
           body: z.union([
             z.object({ title: z.string(), image: z.instanceof(Blob) }),
-            z.instanceof(FormData),
+            z.instanceof(FormData).transform((form) => Object.fromEntries(form)),
           ]),
         },
         response: { status: 204 },
@@ -393,3 +394,43 @@ describe("contract request encodings", () => {
     },
   );
 });
+
+it.each(["form-data", "form-urlencoded"] as const)(
+  "uses a prepared %s as the TanStack key and replays its fields without preparing again",
+  async (encoding) => {
+    const { transport, sent } = setup();
+    const transform = vi.fn((input: string) => ({ tag: input.trim().split(",") }));
+    const body = z.string().transform(transform);
+    const route = { ...facts, response: { status: 204 } } as const;
+    const encoders = {
+      "form-data": vi.fn(codecs.encoders["form-data"]),
+      "form-urlencoded": vi.fn(codecs.encoders["form-urlencoded"]),
+    };
+    const search = transport.createFetcher(
+      encoding === "form-data"
+        ? endpoint({ ...route, request: { encodeAs: "form-data", body } })
+        : endpoint({ ...route, request: { encodeAs: "form-urlencoded", body } }),
+      { codecs: { encoders } },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
+    const lookup = async (input: string) => {
+      const prepared = await search.prepare({ body: input });
+      expectTypeOf(prepared.body).toEqualTypeOf<{ tag: string[] }>();
+      expect(prepared.body).toEqual({ tag: input.trim().split(",") });
+      return client.fetchQuery({
+        queryKey: ["search", prepared],
+        queryFn: ({ signal }) => search.execute(prepared, { signal }),
+      });
+    };
+
+    await lookup(" a,b ");
+    await lookup("a,b");
+    await lookup("b,a");
+    expect(transform).toHaveBeenCalledTimes(3);
+    expect(encoders[encoding].mock.calls).toEqual([[{ tag: ["a", "b"] }], [{ tag: ["b", "a"] }]]);
+    expect(sent).toHaveLength(2);
+    expect((await sent[0]!.formData()).getAll("tag")).toEqual(["a", "b"]);
+    expect((await sent[1]!.formData()).getAll("tag")).toEqual(["b", "a"]);
+    client.clear();
+  },
+);

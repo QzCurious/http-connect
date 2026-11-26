@@ -1,17 +1,13 @@
 import type { JsonValue } from "../internal";
 import type { EndpointContract } from "../contract/endpoint";
 import { toFormData, type FormDataObject } from "./form-data";
-import {
-  toURLSearchParams,
-  type URLSearchParamsNativeInput,
-  type URLSearchParamsObject,
-} from "./search-params";
+import { toURLSearchParams, type URLSearchParamsObject } from "./search-params";
 
 export type RequestEncoderInputMap = {
   json: JsonValue;
   text: string;
-  "form-data": FormData | FormDataObject;
-  "form-urlencoded": URLSearchParams | URLSearchParamsNativeInput | URLSearchParamsObject;
+  "form-data": FormDataObject;
+  "form-urlencoded": URLSearchParamsObject;
   binary: Blob | ArrayBuffer | Uint8Array;
   stream: ReadableStream<Uint8Array>;
 };
@@ -54,11 +50,11 @@ export type Codecs = {
 
 export const codecs = {
   encoders: {
-    query: toURLSearchParams,
+    query: (value) => toURLSearchParams(value),
     json: (value) => JSON.stringify(value),
     text: (value) => value,
-    "form-data": toFormData,
-    "form-urlencoded": toURLSearchParams,
+    "form-data": (value) => toFormData(value),
+    "form-urlencoded": (value) => toURLSearchParams(value),
     binary: (value) => (value instanceof Uint8Array ? Uint8Array.from(value).buffer : value),
     stream: (value) => value,
   },
