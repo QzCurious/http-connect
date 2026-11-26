@@ -1,5 +1,7 @@
 # http-connect
 
+English · [繁體中文](./README.zh-TW.md)
+
 `http-connect` lets a TypeScript application record what it expects from a backend route and use that contract to call the API. Each endpoint describes one request and the responses you have observed. Callers get typed input and results. If the backend returns an unfamiliar status or changes the shape of its data, the fetcher reports the mismatch at runtime.
 
 ## Quick start
