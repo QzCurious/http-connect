@@ -1,10 +1,6 @@
-# http-connect
+Fetch HTTP APIs in a type-safe way. Define API endpoint **contract**s with standard schema compatible library, you get typed **fetcher**s that validate response for you.
 
-English · [繁體中文](./README.zh-TW.md)
-
-`http-connect` lets a TypeScript application record what it expects from a backend route and use that contract to call the API. Each endpoint describes one request and the responses you have observed. Callers get typed input and results. If the backend returns an unfamiliar status or changes the shape of its data, the fetcher reports the mismatch at runtime.
-
-## Quick start
+# Quick start
 
 Install the library and Zod for this example.
 
@@ -12,52 +8,21 @@ Install the library and Zod for this example.
 npm install @qzcurious/http-connect zod
 ```
 
-Read a todo from JSONPlaceholder using Zod and a runtime with Fetch support.
-
 ```ts
-import { codecs, createTransport, endpoint, path } from "@qzcurious/http-connect";
 import { z } from "zod";
+import { codecs, createTransport, endpoint, path, type CallInput } from "../src/public";
 
-const api = createTransport({ baseUrl: "https://jsonplaceholder.typicode.com", codecs });
-const todo = endpoint({
-  method: "GET",
-  path: path("/todos/:id", z.object({ id: z.string() })),
-  request: {},
-  response: {
-    status: 200,
-    decodeAs: "json",
-    body: z.object({ title: z.string(), completed: z.boolean() }),
-  },
-});
-
-const getTodo = api.createFetcher(todo);
-const { body } = await getTodo({ params: { id: "1" } });
-console.log(body.title);
-```
-
-This calls `GET /todos/1` and prints its title after validating the JSON response. To use your own API, change the base URL, path, and response schema.
-
-## Add query parameters, headers, and a 404 response
-
-Suppose `GET /workspaces/:workspaceId/notes` returns a JSON list of notes, or a JSON error when the workspace is missing. The following example uses Zod for validation and a fetch-compatible runtime. Replace the example origin with your API’s origin.
-
-```ts
-import { codecs, createTransport, endpoint, path, type CallInput } from "@qzcurious/http-connect";
-import { z } from "zod";
-
+// Setup transport.
+const origin = "https://api.example.com";
 const transport = createTransport({
-  baseUrl: "https://api.example.com",
   codecs,
+  baseUrl: origin,
 });
 
-const workspaceNotes = path(
-  "/workspaces/:workspaceId/notes",
-  z.object({ workspaceId: z.string().min(1) }),
-);
-
-const listNotesContract = endpoint({
+// Define endpoint contract
+const contract = endpoint({
   method: "GET",
-  path: workspaceNotes,
+  path: path("/workspaces/:workspaceId/notes", z.object({ workspaceId: z.string().min(1) })),
   request: {
     query: z.object({ page: z.number().int().positive(), tag: z.array(z.string()).optional() }),
     headers: z.object({ "accept-language": z.string() }),
@@ -76,79 +41,60 @@ const listNotesContract = endpoint({
   ],
 });
 
-const listNotes = transport.createFetcher(listNotesContract);
-type ListNotesInput = CallInput<typeof listNotesContract>;
+// Create typed fetcher
+const fetcher = transport.createFetcher(contract);
 
-const input: ListNotesInput = {
+await fetcher({
   params: { workspaceId: "acme" },
   query: { page: 1 },
   headers: { "accept-language": "en" },
-};
-
-const result = await listNotes(input);
-if (result.status === 200) {
-  console.log(result.body.map((note) => note.title));
-} else {
-  console.log(result.body.message); // Validated 404 response
-}
-```
-
-This sends `GET /workspaces/acme/notes?page=1` with the header `accept-language: en`. Checking `result.status` narrows the body type to the schema for that status. You can define endpoints beside the features that use them and bind each to the same transport.
-
-## Use a prepared request as a TanStack Query key
-
-In an async loader, prepare the request before giving TanStack Query its options. Both the key and the query function use the same validated value.
-
-```ts
-const prepared = await listNotes.prepare(input);
-const result = await queryClient.fetchQuery({
-  queryKey: ["notes", prepared],
-  queryFn: ({ signal }) => listNotes.execute(prepared, { signal }),
 });
 ```
 
-Preparation resolves the path, normalizes headers, and preserves the inferred query and body schema outputs. URL-encoded and multipart form schemas produce structured objects such as `{ tag: ["a", "b"] }`. Execution applies the configured encoders, constructs a fresh `Request`, and validates the response. For an endpoint without input sections, use `await fetcher.prepare()` to obtain the prepared request or `await fetcher()` to send it directly.
-
-Use this key pattern for plain-data requests. Use JSON-safe field values, including finite numbers and arrays without undefined elements. Files, binary bodies, and streams are outside its scope. Prepared headers appear in the key. For authenticated requests, supply credentials through the configured fetch function and include a stable account scope in the key when results depend on the account.
-
-## Send a request body
-
-To create a note on the same route, declare a POST endpoint. Pair the body schema with `encodeAs` to choose how the transport serializes the validated value.
+Input of the fetcher is typed
 
 ```ts
-const createNoteContract = endpoint({
-  method: "POST",
-  path: workspaceNotes,
-  request: {
-    encodeAs: "json",
-    body: z.string().trim().min(1).transform((title) => ({ title })),
+type FetcherInput = Parameters<typeof fetcher>;
+type FetcherInput = [
+  input: {
+    params: {
+      workspaceId: string;
+    };
+    query: {
+      page: number;
+      tag?: string[] | undefined;
+    };
+    headers: {
+      "accept-language": string;
+    };
   },
-  response: { status: 204 },
-});
-
-const createNote = transport.createFetcher(createNoteContract);
-await createNote({ params: { workspaceId: "acme" }, body: " First note " });
+  options?: Omit<RequestInit, "method" | "headers" | "body" | "duplex"> | undefined,
+];
 ```
 
-The caller supplies a string. The schema trims it and produces an object, so the JSON encoder sends `{"title":"First note"}`. Declaring `{ status: 204 }` is enough for a response with no body to decode.
+Output of the fetcher is typed
 
-Other request encodings include `text`, `form-urlencoded`, `form-data`, `binary`, and `stream`. For a file upload, use `encodeAs: "form-data"` and a schema such as `z.object({ image: z.file(), alt: z.string() })`. Pass a `File` and its description in `body`. Leave `Content-Type` unset so Fetch can generate the multipart boundary. The playground includes the complete upload contract and call. [Endpoint with transport](./playground/endpoint-with-transport.ts)
+```ts
+type FetcherResult = ReturnType<typeof fetcher>;
+type FetcherResult = Promise<
+  | {
+      status: 200;
+      body: {
+        id: string;
+        title: string;
+      }[];
+    }
+  | {
+      status: 404;
+      body: {
+        code: "workspace_not_found";
+        message: string;
+      };
+    }
+>;
+```
 
-## Shape the call
-
-- **Path parameters.** Use `path("/health")` for a static route. For a parameterized route, pass a schema whose output keys match the placeholders. Both `:id` and `{id}` are supported. Use one style per path. The fetcher validates and encodes each parameter as a path segment.
-- **Input and options.** Supply each declared section (`params`, `query`, `headers`, or `body`) in the input object. Individual fields can be optional, like `tag` above. To cancel a call, pass an abort signal in the second argument, as in `listNotes(input, { signal })`. For an endpoint with no input sections, call its fetcher with no arguments or pass `{ signal }` as the first argument.
-- **Response alternatives.** Use one response object or an array of alternatives. For multiple shapes with the same status, the fetcher tries them in declaration order and returns the first that validates. Use `Awaited<ReturnType<typeof listNotes>>` when you need to name the inferred result type.
-
-## Handle failures
-
-A declared HTTP error such as the 404 above is a normal result when its schema matches. Use the error classes exported by `@qzcurious/http-connect` to distinguish invalid input from an unexpected response.
-
-| Outcome | What the caller receives |
-| --- | --- |
-| A call input schema reports validation issues | `CallInputValidationError` with the failing `section` and its `issues`. The request has not been sent. |
-| The status is undeclared, or none of its shapes can decode and validate the response | `UnknownResponseError` with the observed `status`. For example, a 200 with malformed JSON fails the list contract above. |
-| Fetch rejects, for example because of a network failure or cancellation | The original rejection from the fetch implementation. |
+# Usage
 
 ## Configure the transport
 
@@ -179,11 +125,108 @@ const fetchNotes = api.createFetcher(listNotesContract, {
 });
 ```
 
-## More examples
+## Define the contract
 
-- Follow the main workflow from listing notes to creating a note and attaching an image. [Endpoint with transport](./playground/endpoint-with-transport.ts)
-- Use an endpoint contract with your own fetch logic. [Endpoint with manual fetch](./playground/endpoint-with-manual-fetch.ts)
-- Define request and response shapes independently. [Standalone shapes](./playground/standalone-shapes.ts)
-- Choose between JSON and text when a route accepts both. [Multiple request shapes](./playground/multiple-request-shapes.ts)
+```ts
+const contract = endpoint({
+  method: "POST",
+  path: path("/workspaces/:workspaceId/notes", z.object({ workspaceId: z.string().min(1) })),
+  request: {
+    encodeAs: "json",
+    body: z.object({ title: z.string().trim().min(1) }),
+  },
+  response: [
+    { status: 201, decodeAs: "json", body: z.object({ id: z.string(), title: z.string() }) },
+    { status: 404, decodeAs: "json", body: z.object({ message: z.string() }) },
+  ],
+});
+```
 
-For the project’s scope and design rationale, see the [product goals](./docs/goals.md) and [maintainer documentation](./docs/README.md).
+A single response can be written inline as `response: { status: 204 }`. If several shapes share a status, the fetcher returns the first one that validates.
+
+### Encode the request body
+
+The same object can be sent as JSON, URL-encoded fields, or multipart form data. Declare `encodeAs` alongside `body` to select the format the endpoint expects. The encoder receives the schema’s validated output.
+
+```ts
+type EncodeAs = "json" | "text" | "form-data" | "form-urlencoded" | "binary" | "stream";
+```
+
+| `encodeAs`          | Expected `body` schema output                                                                                                           |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `"json"`            | A string, number, boolean, null, or a nested array or object of these values. Object fields and array elements may also be `undefined`. |
+| `"text"`            | `string`                                                                                                                                |
+| `"form-data"`       | `FormDataObject` (a field object supporting nested objects, arrays, and `Blob` values)                                                  |
+| `"form-urlencoded"` | `URLSearchParamsObject` (a field object supporting nested objects and arrays with string, number, boolean, null, or undefined values)   |
+| `"binary"`          | `Blob \| ArrayBuffer \| Uint8Array`                                                                                                     |
+| `"stream"`          | `ReadableStream<Uint8Array>`                                                                                                            |
+
+### Decode the response body
+
+The same response bytes can be read as text, parsed as JSON, or returned as binary data. Declare `decodeAs` alongside `body` to select how the fetcher reads the response. The `body` schema validates the decoded value and supplies the type of `result.body`.
+
+```ts
+type DecodeAs = "json" | "text" | "blob" | "arrayBuffer" | "bytes" | "formData";
+```
+
+| `decodeAs`      | Value passed to the `body` schema |
+| --------------- | --------------------------------- |
+| `"json"`        | `unknown` (parsed JSON)           |
+| `"text"`        | `string`                          |
+| `"blob"`        | `Blob`                            |
+| `"arrayBuffer"` | `ArrayBuffer`                     |
+| `"bytes"`       | `Uint8Array`                      |
+| `"formData"`    | `FormData`                        |
+
+## Derive the fetcher
+
+```ts
+const fetcher = transport.createFetcher(contract);
+
+const result = await fetcher({
+  params: { workspaceId: "acme" },
+  body: { title: " First note " },
+});
+
+if (result.status === 201) {
+  console.log(result.body.id);
+} else {
+  console.log(result.body.message); // 404
+}
+```
+
+Pass fetch options with `fetcher(input, { signal })`. For an endpoint without input fields, use `fetcher()` or `fetcher({ signal })`.
+
+
+## Handle failures
+
+> http-connect only tend to add validation and typing to fetch. It don't handle any error that produced by fetch.
+
+There are two types of error http-connect might throws, `CallInputValidationError` and `UnknownResponseError`. Both might be thrown by fetcher.
+
+| Outcome                                                                              | What the caller receives                                                                                                 |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| A call input schema reports validation issues                                        | `CallInputValidationError` with the failing `section` and its `issues`. The request has not been sent.                   |
+| The status is undeclared, or none of its shapes can decode and validate the response | `UnknownResponseError` with the observed `status`. For example, a 200 with malformed JSON fails the list contract above. |
+| Fetch rejects, for example because of a network failure or cancellation              | The original rejection from the fetch implementation.                                                                    |
+
+## Use it with TanStack Query
+
+```ts
+const prepared = await fetcher.prepare(input);
+const result = await queryClient.fetchQuery({
+  queryKey: [prepared],
+  queryFn: ({ signal }) => fetcher.execute(prepared, { signal }),
+});
+```
+
+> Use this key pattern for plain-data requests. Use JSON-safe field values, including finite numbers and arrays without undefined elements. Files, binary bodies, and streams are outside its scope. Prepared headers appear in the key. For authenticated requests, supply credentials through the configured fetch function and include a stable account scope in the key when results depend on the account.
+
+# Advenced usage
+
+To take full control of the flow. You can use lower level apis. See [Endpoint with manual fetch](./playground/endpoint-with-manual-fetch.ts), [Standalone shapes](./playground/standalone-shapes.ts), [Multiple request shapes](./playground/multiple-request-shapes.ts).
+
+# TODO
+
+- More hand written docs
+- I haven't yet figure out usecase for `encodedAs: "stream"`. Consider it's an unstable feature (AI slop).
