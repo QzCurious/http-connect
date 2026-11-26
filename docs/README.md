@@ -1,6 +1,6 @@
 # Maintainer Docs
 
-These docs orient maintainers around the product model for `http-connect`. The package README teaches user-facing usage; the source tree and package exports carry the module-boundary story.
+These docs orient maintainers around the product model for `http-connect`. The package README teaches user-facing usage.
 
 ## Current Lifecycle
 
@@ -18,20 +18,11 @@ Execution turns an internal Prepared Request into a Web Platform `Request` for t
 
 `src/public.ts` explicitly lists the names available from the package entry point, `http-connect`.
 
-Implementation modules import directly from the files that define the symbols they use. See [ADR 0001](./adr/0001-source-tree-as-architecture-narrative.md).
-
-Validation responsibility follows the lifecycle seams: TypeScript validates Endpoint Contract authoring, Standard Schema validates Call Input and observed response data, and the Fetch `Request` constructor enforces method/body compatibility at call time. Runtime authoring checks are limited to values TypeScript cannot prove safe or failures that would otherwise make execution unsafe or confusing. See [ADR 0004](./adr/0004-validation-ownership-follows-lifecycle-seams.md).
-
 Each Defined Response narrows `status` to the literal HTTP status declared by its Response Shape. Shapes with different statuses can be narrowed by `status`; alternatives sharing a status retain their body and header unions.
 
 Author declarations with `path()`, `request()`, `response()`, or `endpoint()`. Use `typeof` on a declaration to refer to its inferred type.
 
 Keep standalone response collection exposure minimal in the current public interface. `endpoint(...)` is the supported authoring boundary for exact-status Response Shapes and enforces that at least one Response Shape is present; do not add separate public response collection type exports unless a concrete user-facing need appears.
-
-## Durable Docs
-
-- [Goals](./goals.md): product goal, target user, success criteria, and non-goals.
-- [Deferred ideas](./deferred.md): deliberately out-of-scope ideas that should not shape the current interface.
 
 ## Future Docs Rule
 
