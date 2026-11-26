@@ -4,6 +4,7 @@ import { z } from "zod";
 import { endpoint, type EndpointContract } from "./endpoint";
 import { request } from "./request";
 import { response, type ResponseShape } from "./response";
+import type { PathInput, RequestInput } from "../public";
 import type { CallInput } from "../transport/call-input";
 import type { RuntimeResult } from "../transport/fetcher";
 
@@ -579,4 +580,51 @@ test("helpers return shallow readonly views of mutable drafts", () => {
   result.status = 201;
   // @ts-expect-error - the endpoint helper returns a readonly view
   contract.method = "POST";
+});
+
+test("body declaration errors preserve neighboring schema types", () => {
+  const params = z.object({ id: z.string().transform(Number) });
+  const shape = endpoint({
+    method: "POST",
+    path: path("/users/{id}", params),
+    // @ts-expect-error - the request object is missing encodeAs
+    request: {
+      body: z.undefined(),
+    },
+    response: { status: 204 },
+  }).path;
+
+  expectTypeOf(shape.params).toEqualTypeOf<typeof params>();
+  expectTypeOf<z.input<typeof shape.params>>().toEqualTypeOf<{ id: string }>();
+  expectTypeOf<z.output<typeof shape.params>>().toEqualTypeOf<{ id: number }>();
+
+  const encodingOnly = endpoint({
+    method: "POST",
+    path: path("/users/{id}", params),
+    // @ts-expect-error - the request object is missing body
+    request: {
+      encodeAs: "json",
+    },
+    response: { status: 204 },
+  }).path;
+  expectTypeOf(encodingOnly.params).toEqualTypeOf<typeof params>();
+});
+
+test("infers call input from path and request schema inputs", () => {
+  const contract = endpoint({
+    method: "POST",
+    path: path("/users/{id}", z.object({ id: z.string().transform(Number) })),
+    request: request({ encodeAs: "text", body: z.number().transform(String) }),
+    response: response({ status: 204 }),
+  });
+  expectTypeOf<
+    PathInput<typeof contract.path> & RequestInput<typeof contract.request>
+  >().toMatchTypeOf<{
+    params: { id: string };
+    body: number;
+  }>();
+  expectTypeOf<CallInput<typeof contract>>().toEqualTypeOf<{
+    params: { id: string };
+    body: number;
+  }>();
 });

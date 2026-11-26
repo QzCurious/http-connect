@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { path, request, resolvePath, type PathInput, type RequestInput } from "../public";
+import { path, resolvePath, type PathInput } from "../public";
 import type { Invalid } from "../internal";
 import { expectTypeOf, test } from "vitest";
 import type { ExpectedPath, IsValidPathParamName, PathParamNames, ResolvedPath } from "./path";
@@ -101,30 +101,132 @@ test("preserves plain paths at type level", () => {
   expectTypeOf<ResolvedPath<string, {}>>().toEqualTypeOf<string>();
 });
 
-test("composes path and request inputs from the schema input types", () => {
+test("infers path inputs for resolution", () => {
   const notesPath = path(
     "/workspaces/:workspaceId/notes",
-    z.object({
-      workspaceId: z.string().transform(Number),
-    }),
+    z.object({ workspaceId: z.string().transform(Number) }),
   );
-  const note = request({ encodeAs: "text", body: z.number().transform(String) });
-
-  expectTypeOf<PathInput<typeof notesPath> & RequestInput<typeof note>>().toMatchTypeOf<{
-    params: { workspaceId: string };
-    body: number;
-  }>();
+  expectTypeOf<PathInput<typeof notesPath>>().toEqualTypeOf<{ params: { workspaceId: string } }>();
   expectTypeOf(resolvePath<typeof notesPath>)
     .parameter(1)
     .toEqualTypeOf<{ workspaceId: string }>();
   const health = path("/health");
   expectTypeOf(resolvePath<typeof health>).parameters.toEqualTypeOf<[path: typeof health]>();
   expectTypeOf<PathInput<typeof health>>().toEqualTypeOf<{}>();
+});
 
-  request({
-    encodeAs: "text",
-    body: z.string(),
-    // @ts-expect-error - params belong to the path declaration
-    params: notesPath.params,
-  });
+test("requires literal paths", () => {
+  expectTypeOf<ExpectedPath<string>>().toEqualTypeOf<
+    Invalid<"Error: path must be a string literal.">
+  >();
+  expectTypeOf<ExpectedPath<`/${string}`>>().toEqualTypeOf<
+    Invalid<"Error: path must be a string literal.">
+  >();
+  expectTypeOf<ExpectedPath<`/users/${string}`>>().toEqualTypeOf<
+    Invalid<"Error: path must be a string literal.">
+  >();
+  expectTypeOf<ExpectedPath<`/users/${number}/posts`>>().toEqualTypeOf<
+    Invalid<"Error: path must be a string literal.">
+  >();
+  expectTypeOf<ExpectedPath<`/users/${bigint}/posts`>>().toEqualTypeOf<
+    Invalid<"Error: path must be a string literal.">
+  >();
+
+  const template: `/${string}` = "/users";
+  // @ts-expect-error - authored paths must be literals
+  path(template);
+});
+
+test("requires path to be slash-prefixed and non-protocol-relative", () => {
+  expectTypeOf<ExpectedPath<"/users/123">>().toEqualTypeOf<"/users/123">();
+  expectTypeOf<ExpectedPath<`/users/${1 | 2}`>>().toEqualTypeOf<"/users/1" | "/users/2">();
+  expectTypeOf<ExpectedPath<"//users">>().toEqualTypeOf<
+    Invalid<'Error: path must not start with "//".'>
+  >();
+  expectTypeOf<ExpectedPath<"users">>().toEqualTypeOf<
+    Invalid<"Error: path must start with '/'.">
+  >();
+  expectTypeOf<ExpectedPath<"/users/:id/posts/{postId}">>().toEqualTypeOf<
+    Invalid<'Error: path must not mix ":id" and "{id}" placeholder styles.'>
+  >();
+});
+
+test("params schema keys follow the runtime placeholder grammar", () => {
+  path("/files/:fileName.:extension", z.object({ fileName: z.string(), extension: z.string() }));
+
+  path("/files/prefix-:_A1.json", z.object({ _A1: z.string() }));
+
+  path(
+    "/files/:fileName.:extension",
+    // @ts-expect-error - punctuation terminates colon placeholder names
+    z.object({ "fileName.:extension": z.string() }),
+  );
+});
+
+test("rejects invalid names and malformed placeholders during authoring", () => {
+  // @ts-expect-error - placeholder names must be identifiers
+  path("/files/{bad-name}");
+
+  // @ts-expect-error - colon names cannot start with a digit
+  path("/users/:123");
+
+  // @ts-expect-error - nested braces are invalid
+  path("/users/{{id}}");
+});
+
+test("params schemas must output a value for every placeholder", () => {
+  path(
+    "/users/{id}",
+    // @ts-expect-error - an optional output cannot guarantee a path parameter
+    z.object({ id: z.string().optional() }),
+  );
+
+  const shape = path("/users/{id}", z.object({ id: z.string().default("guest") }));
+
+  expectTypeOf<z.input<typeof shape.params>>().toEqualTypeOf<{ id?: string }>();
+  expectTypeOf<z.output<typeof shape.params>>().toEqualTypeOf<{ id: string }>();
+});
+
+test("rejects params when path has no placeholders", () => {
+  path(
+    "/users",
+    // @ts-expect-error - params is not allowed without placeholders
+    z.object({ id: z.string() }),
+  );
+});
+
+test("rejects extra params keys", () => {
+  path(
+    "/users/{id}",
+    // @ts-expect-error - extra is not present in path
+    z.object({ id: z.string(), extra: z.string() }),
+  );
+});
+
+test("rejects missing params keys", () => {
+  path(
+    "/users/{id}/posts/{postId}",
+    // @ts-expect-error - postId is missing
+    z.object({ id: z.string() }),
+  );
+});
+
+test("rejects params schemas with unsupported output values", () => {
+  path(
+    "/users/{id}",
+    // @ts-expect-error - params must output string or number values
+    z.object({ id: z.boolean() }),
+  );
+
+  path(
+    "/users/{id}",
+    // @ts-expect-error - params must output string or number values
+    z.object({ id: z.string().transform((value) => ({ value })) }),
+  );
+});
+
+test("accepts unknown path parameter inputs with supported outputs", () => {
+  const shape = path("/users/{id}", z.object({ id: z.coerce.number() }));
+  expectTypeOf<z.input<typeof shape.params>>().toEqualTypeOf<{ id: unknown }>();
+  expectTypeOf<z.output<typeof shape.params>>().toEqualTypeOf<{ id: number }>();
 });
