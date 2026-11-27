@@ -36,15 +36,12 @@ Potential contract extensions include:
 - a typed cookie section
 - explicit omission of an entire declared Call Input section
 - dedicated response media-type metadata, alongside correlated headers and bodies
+- a status-less Response Shape that matches any HTTP response status
 - `TRACE` in the HTTP method vocabulary
-
-Status classes and default response declarations would require revisiting the exact-status drift model in [ADR 0006](adr/0006-response-shapes-own-status-identity.md).
 
 ## Transport Extensions
 
 Future extensions to the Fetch transport may include:
 
-- a `createSafeFetcher(...)` companion that returns transport failures instead of throwing them
 - response codec key extensions beyond the fixed built-in `decodeAs` keys
 
-Future extensions should preserve Fetch request and response semantics. [ADR 0011](adr/0011-fetch-is-the-transport-interface.md)
