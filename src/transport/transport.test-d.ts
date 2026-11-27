@@ -4,11 +4,14 @@ import { z } from "zod";
 import { path, endpoint } from "../public";
 import { createTransport } from "./transport";
 
-const transport = createTransport({ codecs, prefix: "https://example.com", fetch });
+const transport = createTransport({ codecs, baseUrl: "https://example.com", fetch });
+
+// @ts-expect-error A transport requires baseUrl.
+createTransport({ fetch });
 
 test("types the fetch override against the assembled request", () => {
   createTransport({
-    prefix: "https://example.com",
+    baseUrl: "https://example.com",
     fetch: async (request, init) => {
       expectTypeOf(init).toEqualTypeOf<RequestInit | undefined>();
       expectTypeOf(request).toEqualTypeOf<Request>();
@@ -16,7 +19,7 @@ test("types the fetch override against the assembled request", () => {
     },
   });
   createTransport({
-    prefix: "https://example.com",
+    baseUrl: "https://example.com",
     // @ts-expect-error - fetch must return a promise.
     fetch: () => new Response(),
   });
@@ -32,7 +35,7 @@ test("requires only codecs the transport cannot guarantee", () => {
       { status: 400, decodeAs: "json", body: z.string() },
     ],
   });
-  const config = { prefix: "https://example.com", fetch };
+  const config = { baseUrl: "https://example.com", fetch };
   const transport = createTransport({
     ...config,
     codecs: {
@@ -71,7 +74,7 @@ test("requires only codecs the transport cannot guarantee", () => {
 
 test("a form-urlencoded body encoder cannot satisfy a query schema", () => {
   const transport = createTransport({
-    prefix: "https://example.com",
+    baseUrl: "https://example.com",
     fetch,
     codecs: { encoders: { "form-urlencoded": codecs.encoders["form-urlencoded"] } },
   });
@@ -97,7 +100,7 @@ test("requires decoders guaranteed by only one transport alternative", () => {
   });
   function bind(decoders: Pick<typeof codecs.decoders, "json"> | typeof codecs.decoders) {
     const transport = createTransport({
-      prefix: "https://example.com",
+      baseUrl: "https://example.com",
       fetch,
       codecs: { decoders },
     });
@@ -131,7 +134,7 @@ test("limits fetcher overrides to the endpoint's codec keys", () => {
       },
     },
   });
-  createTransport({ prefix: "https://example.com", fetch }).createFetcher(contract, {
+  createTransport({ baseUrl: "https://example.com", fetch }).createFetcher(contract, {
     codecs: {
       encoders: { query: codecs.encoders.query },
       decoders: {

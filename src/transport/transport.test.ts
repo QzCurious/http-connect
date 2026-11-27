@@ -7,7 +7,7 @@ import { endpoint, type EndpointContract } from "../contract/endpoint";
 import { createTransport } from "./transport";
 
 describe("fetch transport", () => {
-  it("uses configured prefix and serializes contract query into the URL", async () => {
+  it("uses baseUrl and serializes contract query into the URL", async () => {
     const fetchMock = vi.fn(async (transportRequest: Request) => {
       expect(transportRequest.url).toBe(
         "https://api.example.com/v1/users/a%2Fb?page=2&tags=red&tags=blue&filter%5Bprice%5D%5Bgte%5D=50&items%5B0%5D%5Bid%5D=1&empty=",
@@ -17,7 +17,7 @@ describe("fetch transport", () => {
     });
     const transport = createTransport({
       codecs,
-      prefix: "https://api.example.com/v1/",
+      baseUrl: "https://api.example.com/v1/",
       fetch: fetchMock,
     });
     const fetcher = transport.createFetcher(
@@ -55,9 +55,9 @@ describe("fetch transport", () => {
     ["https://dev.to", "/articles", "/articles"],
     ["https://dev.to/api", "/", "/api/"],
     ["https://dev.to/api///", "/articles//latest/", "/api/articles//latest/"],
-  ] as const)("joins %s and %s as %s", async (prefix, template, pathname) => {
+  ] as const)("joins %s and %s as %s", async (baseUrl, template, pathname) => {
     const fetch = vi.fn(async (_request: Request) => new Response(null, { status: 204 }));
-    const transport = createTransport({ prefix, fetch });
+    const transport = createTransport({ baseUrl, fetch });
     const fetcher = transport.createFetcher(
       endpoint({ method: "GET", path: path(template), request: {}, response: { status: 204 } }),
     );
@@ -87,7 +87,7 @@ describe("fetch transport", () => {
     });
     const transport = createTransport({
       codecs,
-      prefix: "https://api.example.com",
+      baseUrl: "https://api.example.com",
       fetch: fetchMock as typeof fetch,
     });
     const fetcher = transport.createFetcher(
@@ -142,7 +142,7 @@ it("executes one request with response alternatives and transport options", asyn
   });
   const transport = createTransport({
     codecs,
-    prefix: "https://api.example.com",
+    baseUrl: "https://api.example.com",
     fetch: fetchMock as typeof fetch,
   });
   const send = transport.createFetcher(
@@ -190,7 +190,7 @@ it.each(["GET", "HEAD"] as const)(
     const fetchMock = vi.fn<typeof fetch>();
     const transport = createTransport({
       codecs,
-      prefix: "https://api.example.com",
+      baseUrl: "https://api.example.com",
       fetch: fetchMock,
     });
     // @ts-expect-error - exercise native Request behavior for an untyped caller.
@@ -211,7 +211,7 @@ it("binds codecs per key and isolates overrides between fetchers", async () => {
     response: { status: 200, decodeAs: "text", body: z.string() },
   });
   const transport = createTransport({
-    prefix: "https://example.com",
+    baseUrl: "https://example.com",
     fetch: async (request) => new Response(await request.text()),
     codecs: {
       encoders: { text: async (value) => value.toUpperCase() },
@@ -240,7 +240,7 @@ it("encodes the validated query with the fetcher override", async () => {
     response: { status: 204 },
   });
   const config = {
-    prefix: "https://example.com",
+    baseUrl: "https://example.com",
     fetch: vi.fn(async (_request: Request) => new Response(null, { status: 204 })),
   };
   const transport = createTransport({
@@ -266,7 +266,7 @@ it("resolves registered codecs at binding and inherits an explicitly undefined o
     text: async () => "inherited",
   };
   const transport = createTransport({
-    prefix: "https://example.com",
+    baseUrl: "https://example.com",
     fetch: async () => new Response(),
     codecs: { decoders: defaults },
   });

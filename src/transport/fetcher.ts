@@ -26,13 +26,13 @@ export type Fetcher<Endpoint extends EndpointContract> = {
 export function createFetcher<const Endpoint extends EndpointContract>(
   endpoint: Endpoint,
   {
-    prefix,
+    baseUrl,
     fetch,
     codecs,
   }: Required<TransportConfig> & { codecs: NoInfer<RequiredCodecs<Endpoint>> },
 ): Fetcher<Endpoint> {
   const { encoders = {}, decoders = {} } = codecs;
-  const urlPrefix = prefix.replace(/\/+$/, "");
+  const urlPrefix = baseUrl.replace(/\/+$/, "");
   const responseShapes = "status" in endpoint.response ? [endpoint.response] : endpoint.response;
   const shape = endpoint.request;
   const hasCallInput =

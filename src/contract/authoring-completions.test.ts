@@ -12,7 +12,7 @@ const contract = endpoint({
     encodeAs: "json", body: z.object({ name: z.string() }) },
   response: { status: 200 }
 });
-const transport = createTransport({ codecs, prefix: "https://example.com", fetch });
+const transport = createTransport({ codecs, baseUrl: "https://example.com", fetch });
 const fetcher = transport.createFetcher(contract);
 `;
 const requestFields = ["query", "headers", "body", "encodeAs"];
@@ -43,7 +43,7 @@ const cases: [string, string, string[]][] = [
   ["prepareRequest input", "prepareRequest(contract, { /**/ })", sections],
   ["typed Call Input", "const input: CallInput<typeof contract> = { /**/ }", sections],
   ["fetcher input", "fetcher({ /**/ })", sections],
-  ["transport config", "createTransport({ /**/ })", ["prefix", "fetch", "codecs"]],
+  ["transport config", "createTransport({ /**/ })", ["baseUrl", "fetch", "codecs"]],
   [
     "transport endpoint",
     "transport.createFetcher(endpoint({ /**/ }))",

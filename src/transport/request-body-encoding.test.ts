@@ -17,7 +17,7 @@ function setup() {
     fetchMock,
     transport: createTransport({
       codecs,
-      prefix: "https://example.com",
+      baseUrl: "https://example.com",
       fetch: fetchMock,
     }),
   };
