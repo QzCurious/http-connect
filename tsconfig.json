@@ -6,6 +6,7 @@
     "moduleResolution": "bundler",
     "noEmit": true,
     "strict": true,
+    "noUnusedLocals": false,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
