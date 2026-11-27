@@ -232,3 +232,5 @@ To take full control of the flow. You can use lower level apis. See [Endpoint wi
 
 - More hand written docs
 - I haven't yet figure out usecase for `encodedAs: "stream"`. Consider it's an unstable feature (AI slop).
+- Maybe middleware
+- Built-in adapter for ky, axios, etc.
