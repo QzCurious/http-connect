@@ -131,7 +131,7 @@ test("limits fetcher overrides to the endpoint's codec keys", () => {
       },
     },
   });
-  createTransport({ baseUrl: "https://example.com" }).createFetcher(contract, {
+  createTransport({ baseUrl: "https://example.com", fetch }).createFetcher(contract, {
     codecs: {
       encoders: { query: codecs.encoders.query },
       decoders: {

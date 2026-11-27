@@ -17,6 +17,7 @@ const origin = "https://api.example.com";
 const transport = createTransport({
   codecs,
   baseUrl: origin,
+  fetch,
 });
 
 // Define endpoint contract
@@ -118,7 +119,7 @@ Use `transport.createFetcher(contract, { fetch: customFetch })` to override the 
 Passing `codecs` opts into the built-in query and body encoders and response decoders. To register only what a contract uses, configure codecs on the transport or in the second argument to `createFetcher`. Fetcher-level codecs override the corresponding transport entries. For example, the list endpoint needs a query encoder and a JSON decoder.
 
 ```ts
-const api = createTransport({ baseUrl: "https://api.example.com" });
+const api = createTransport({ baseUrl: "https://api.example.com", fetch });
 const fetchNotes = api.createFetcher(listNotesContract, {
   codecs: {
     encoders: { query: codecs.encoders.query },

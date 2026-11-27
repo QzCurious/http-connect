@@ -6,6 +6,7 @@ const origin = "https://api.example.com";
 const transport = createTransport({
   codecs,
   baseUrl: origin,
+  fetch,
 });
 
 // Define endpoint contract
