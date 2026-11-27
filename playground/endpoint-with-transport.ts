@@ -1,12 +1,14 @@
 import { z } from "zod";
 import { codecs, createTransport, endpoint, path, type CallInput } from "../src/public";
 
+// Setup transport.
 const origin = "https://api.example.com";
 const transport = createTransport({
   codecs,
   baseUrl: origin,
 });
 
+// Define endpoint contract
 const listNotesContract = endpoint({
   method: "GET",
   path: path("/workspaces/:workspaceId/notes", z.object({ workspaceId: z.string().min(1) })),
@@ -28,6 +30,7 @@ const listNotesContract = endpoint({
   ],
 });
 
+// Create typed fetcher
 const listNotes = transport.createFetcher(listNotesContract);
 
 type ListNotesInput = Parameters<typeof listNotes>;
