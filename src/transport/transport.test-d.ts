@@ -49,8 +49,14 @@ test("requires only codecs the transport cannot guarantee", () => {
     },
   });
   transport.createFetcher(contract, {
+    fetch: async (request) => {
+      expectTypeOf(request).toEqualTypeOf<Request>();
+      return new Response();
+    },
     codecs: { decoders: { text: (response) => response.text() } },
   });
+  // @ts-expect-error - overriding fetch still requires the missing text decoder
+  transport.createFetcher(contract, { fetch });
   const partial: import("../codec/codecs").Codecs = codecs;
   // @ts-expect-error - optional codec properties cannot establish availability
   createTransport({ ...config, codecs: partial }).createFetcher(contract);

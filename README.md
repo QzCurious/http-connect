@@ -113,6 +113,8 @@ function authenticatedTransport(baseUrl: string, token: string) {
 }
 ```
 
+Use `transport.createFetcher(contract, { fetch: customFetch })` to override the transport’s fetch implementation for one fetcher. Both direct calls and `fetcher.execute()` use that implementation.
+
 Passing `codecs` opts into the built-in query and body encoders and response decoders. To register only what a contract uses, configure codecs on the transport or in the second argument to `createFetcher`. Fetcher-level codecs override the corresponding transport entries. For example, the list endpoint needs a query encoder and a JSON decoder.
 
 ```ts

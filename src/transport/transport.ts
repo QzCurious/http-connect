@@ -1,7 +1,7 @@
+import type { Codecs, RequiredCodecs } from "../codec/codecs";
 import type { EndpointContract } from "../contract/endpoint";
 import { shallowMergeDefined, type Invalid } from "../internal";
-import type { CodecOptions, Codecs, RequiredCodecs } from "../codec/codecs";
-import { createFetcher, type Fetcher } from "./fetcher";
+import { createFetcher } from "./fetcher";
 
 export type TransportConfig = {
   baseUrl: string;
@@ -18,29 +18,29 @@ type CompatibleEndpoint<E extends EndpointContract> = E &
     ? {}
     : { request: Invalid<"Error: Fetch cannot send GET or HEAD requests with a body."> });
 
-interface Transport<C extends Codecs = {}> {
-  createFetcher<const Endpoint extends EndpointContract>(
-    endpoint: CompatibleEndpoint<Endpoint>,
-    ...options: CodecOptions<NoInfer<Endpoint>, C>
-  ): Fetcher<Endpoint>;
-}
+type FetchOverride = Pick<TransportConfig, "fetch">;
 
-export function createTransport<const Config extends TransportConfig>(
-  config: Config,
-): Transport<Config extends { codecs: infer C extends Codecs } ? C : {}>;
-export function createTransport(config: TransportConfig): Transport {
-  const dispatch = config.fetch ?? globalThis.fetch;
+type FetcherConfig<Overrides> = keyof Overrides extends never
+  ? [config?: FetchOverride]
+  : {} extends Overrides
+    ? [config?: FetchOverride & { codecs?: Overrides }]
+    : [config: FetchOverride & { codecs: Overrides }];
+
+export function createTransport<const Config extends TransportConfig>(config: Config) {
+  type Defaults = Config extends { codecs: infer C extends Codecs } ? C : {};
+
   return {
     createFetcher<const Endpoint extends EndpointContract>(
       endpoint: CompatibleEndpoint<Endpoint>,
-      options?: Pick<TransportConfig, "codecs">,
+      ...[fetcherConfig]: FetcherConfig<RequiredCodecs<NoInfer<Endpoint>, Defaults>>
     ) {
+      const overrides: Pick<TransportConfig, "fetch" | "codecs"> | undefined = fetcherConfig;
       return createFetcher<Endpoint>(endpoint, {
         baseUrl: config.baseUrl,
-        fetch: dispatch,
+        fetch: overrides?.fetch ?? config.fetch ?? globalThis.fetch,
         codecs: {
-          encoders: shallowMergeDefined(config.codecs?.encoders, options?.codecs?.encoders),
-          decoders: shallowMergeDefined(config.codecs?.decoders, options?.codecs?.decoders),
+          encoders: shallowMergeDefined(config.codecs?.encoders, overrides?.codecs?.encoders),
+          decoders: shallowMergeDefined(config.codecs?.decoders, overrides?.codecs?.decoders),
         } as RequiredCodecs<Endpoint>,
       });
     },

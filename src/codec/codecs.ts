@@ -104,14 +104,3 @@ export type RequiredCodecs<
     "decoders",
     CodecOverrides<ResponseDecoders<Endpoint["response"]>, Defaults["decoders"]>
   >;
-
-type FetcherOptions<Overrides> = keyof Overrides extends never
-  ? []
-  : {} extends Overrides
-    ? [options?: { codecs?: Overrides }]
-    : [options: { codecs: Overrides }];
-
-export type CodecOptions<
-  Endpoint extends EndpointContract,
-  Defaults extends Codecs,
-> = FetcherOptions<RequiredCodecs<Endpoint, Defaults>>;
