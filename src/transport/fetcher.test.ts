@@ -6,7 +6,7 @@ import { z } from "zod";
 import { endpoint } from "../contract/endpoint";
 import { createFetcher, UnknownResponseError } from "./fetcher";
 
-const baseUrl = "https://example.com";
+const prefix = "https://example.com";
 
 describe("createFetcher", () => {
   it("executes an endpoint with no call input", async () => {
@@ -18,7 +18,7 @@ describe("createFetcher", () => {
         request: {},
         response: { status: 204 },
       }),
-      { baseUrl, codecs, fetch },
+      { prefix, codecs, fetch },
     );
 
     const prepared = await fetcher.prepare();
@@ -26,7 +26,7 @@ describe("createFetcher", () => {
     expect(fetch).not.toHaveBeenCalled();
     await expect(fetcher.execute(prepared)).resolves.toEqual({ status: 204 });
     expect(fetch).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ method: "GET", url: baseUrl + "/health" }),
+      expect.objectContaining({ method: "GET", url: prefix + "/health" }),
     );
     fetch.mockClear();
 
@@ -34,7 +34,7 @@ describe("createFetcher", () => {
       status: 204,
     });
     expect(fetch).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ method: "GET", url: baseUrl + "/health", cache: "no-store" }),
+      expect.objectContaining({ method: "GET", url: prefix + "/health", cache: "no-store" }),
     );
   });
 
@@ -48,7 +48,7 @@ describe("createFetcher", () => {
         response: { status: 200 },
       }),
       {
-        baseUrl,
+        prefix,
         codecs,
         fetch: async () => {
           throw failure;
@@ -72,7 +72,7 @@ it("throws a validation error for invalid schema input before dispatch", async (
       },
       response: { status: 204 },
     }),
-    { baseUrl, codecs, fetch },
+    { prefix, codecs, fetch },
   );
   await expect(send({ body: -1 })).rejects.toBeInstanceOf(CallInputValidationError);
   expect(fetch).not.toHaveBeenCalled();
@@ -87,7 +87,7 @@ it("passes the validated body and second-argument options to execution", async (
       request: { encodeAs: "text", body: z.string().trim() },
       response: { status: 201, decodeAs: "json", body: z.object({ saved: z.boolean() }) },
     }),
-    { baseUrl, codecs, fetch },
+    { prefix, codecs, fetch },
   );
 
   await expect(send({ body: " hello " }, { cache: "reload" })).resolves.toEqual({
@@ -96,7 +96,7 @@ it("passes the validated body and second-argument options to execution", async (
   });
   expect(fetch).toHaveBeenCalledExactlyOnceWith(expect.any(Request));
   const [[request]] = fetch.mock.calls;
-  expect(request).toMatchObject({ method: "POST", url: baseUrl + "/values", cache: "reload" });
+  expect(request).toMatchObject({ method: "POST", url: prefix + "/values", cache: "reload" });
   await expect(request.text()).resolves.toBe("hello");
 });
 
@@ -113,7 +113,7 @@ it("throws UnknownResponseError when the exact status response body cannot parse
   });
 
   const send = createFetcher(contract, {
-    baseUrl,
+    prefix,
     codecs,
     fetch: async () => new Response("not-json", { status: 200 }),
   });
@@ -143,7 +143,7 @@ it("does not try another response shape when status validation fails", async () 
   });
 
   const send = createFetcher(contract, {
-    baseUrl,
+    prefix,
     codecs,
     fetch: async () => new Response(JSON.stringify({ other: true }), { status: 200 }),
   });
@@ -183,7 +183,7 @@ it("tries all alternatives with the observed status and discards the original bo
     .fn<() => Promise<Response>>()
     .mockResolvedValueOnce(observed)
     .mockResolvedValueOnce(Response.json({ type: "other" }));
-  const send = createFetcher(contract, { baseUrl, codecs, fetch });
+  const send = createFetcher(contract, { prefix, codecs, fetch });
   await expect(send()).resolves.toEqual({
     status: 200,
     body: { type: "second", value: 42 },
@@ -203,7 +203,7 @@ it("can fall back to another decoder for the same status", async () => {
     ],
   });
   const send = createFetcher(contract, {
-    baseUrl,
+    prefix,
     codecs,
     fetch: async () => new Response("plain text"),
   });
@@ -218,7 +218,7 @@ it.each([200, 418])("cancels an unread body when the observed status is %i", asy
   const observed = new Response(new ReadableStream({ cancel }), { status });
   const send = createFetcher(
     endpoint({ method: "GET", path: path("/"), request: {}, response: { status: 200 } }),
-    { baseUrl, codecs, fetch: async () => observed },
+    { prefix, codecs, fetch: async () => observed },
   );
 
   if (status === 200) await expect(send()).resolves.toEqual({ status });
@@ -244,7 +244,7 @@ it("releases both branches when the first decoder returns without reading", asyn
       ],
     }),
     {
-      baseUrl,
+      prefix,
       codecs: { decoders: { ...codecs.decoders, text: () => "ok" } },
       fetch: async () => observed,
     },

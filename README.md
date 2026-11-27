@@ -16,7 +16,7 @@ import { codecs, createTransport, endpoint, path, type CallInput } from "../src/
 const origin = "https://api.example.com";
 const transport = createTransport({
   codecs,
-  baseUrl: origin,
+  prefix: origin,
   fetch,
 });
 
@@ -99,12 +99,14 @@ type FetcherResult = Promise<
 
 ## Configure the transport
 
+Set `prefix` to an absolute API URL without a query string or fragment. The transport removes trailing slashes from the prefix and appends the endpoint path. With `prefix: "https://api.example.com/v1/"`, the quick start request goes to `https://api.example.com/v1/workspaces/acme/notes?page=1`. If the endpoint path also starts with `/v1`, the resulting path starts with `/v1/v1/`.
+
 `createTransport` uses `globalThis.fetch` by default. Supply a `fetch` function to customize dispatch. It receives the assembled Web Platform `Request` and returns a promise for a `Response`.
 
 ```ts
-function authenticatedTransport(baseUrl: string, token: string) {
+function authenticatedTransport(prefix: string, token: string) {
   return createTransport({
-    baseUrl,
+    prefix,
     codecs,
     fetch(request) {
       request.headers.set("Authorization", `Bearer ${token}`);
@@ -119,7 +121,7 @@ Use `transport.createFetcher(contract, { fetch: customFetch })` to override the 
 Passing `codecs` opts into the built-in query and body encoders and response decoders. To register only what a contract uses, configure codecs on the transport or in the second argument to `createFetcher`. Fetcher-level codecs override the corresponding transport entries. For example, the list endpoint needs a query encoder and a JSON decoder.
 
 ```ts
-const api = createTransport({ baseUrl: "https://api.example.com", fetch });
+const api = createTransport({ prefix: "https://api.example.com", fetch });
 const fetchNotes = api.createFetcher(listNotesContract, {
   codecs: {
     encoders: { query: codecs.encoders.query },

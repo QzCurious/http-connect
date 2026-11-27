@@ -19,7 +19,7 @@ Bound stages could supply deterministic defaults if callers need derived request
 - Shared defaults for `params`, `query`, `headers`, or `body`.
 - Typed context used while producing request values.
 - Middleware-like request lifecycle behavior around execution.
-- Higher-level transport configuration beyond the configured fetch function and base URL.
+- Higher-level transport configuration beyond the configured fetch function and URL prefix.
 
 If introduced, these concerns should remain outside the Endpoint Contract.
 

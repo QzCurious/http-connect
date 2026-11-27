@@ -28,7 +28,7 @@ The product should stay legible by centering one explicit executable path:
 
 - Endpoint Contract: one Request Shape plus exact-status Response Shapes
 - Call Input: typed directly from that Endpoint Contract
-- Transport Configuration: `createTransport` binds a base URL and a fetch implementation
+- Transport Configuration: `createTransport` binds a URL prefix and a fetch implementation
 - Fetcher Execution: `transport.createFetcher(endpoint)` binds a compatible Endpoint Contract to its Transport
 - Runtime Result: structured validation outcome for observed HTTP responses
 

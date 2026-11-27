@@ -26,12 +26,13 @@ export type Fetcher<Endpoint extends EndpointContract> = {
 export function createFetcher<const Endpoint extends EndpointContract>(
   endpoint: Endpoint,
   {
-    baseUrl,
+    prefix,
     fetch,
     codecs,
   }: Required<TransportConfig> & { codecs: NoInfer<RequiredCodecs<Endpoint>> },
 ): Fetcher<Endpoint> {
   const { encoders = {}, decoders = {} } = codecs;
+  const urlPrefix = prefix.replace(/\/+$/, "");
   const responseShapes = "status" in endpoint.response ? [endpoint.response] : endpoint.response;
   const shape = endpoint.request;
   const hasCallInput =
@@ -55,7 +56,7 @@ export function createFetcher<const Endpoint extends EndpointContract>(
     preparedRequest: PreparedRequest,
     options?: FetchOptions,
   ): Promise<RuntimeResult<Endpoint>> {
-    const url = new URL(preparedRequest.resolvedPath, baseUrl);
+    const url = new URL(urlPrefix + preparedRequest.resolvedPath);
     if (preparedRequest.query !== undefined && encoders.query) {
       url.search = encoders.query(preparedRequest.query).toString();
     }

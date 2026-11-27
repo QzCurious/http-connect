@@ -7,7 +7,7 @@ These docs orient maintainers around the product model for `http-connect`. The p
 The application-facing lifecycle is:
 
 1. Endpoint Contract: `endpoint({ request, response })` records the backend route shape.
-2. Transport: `createTransport` binds a base URL and a fetch implementation.
+2. Transport: `createTransport` binds a URL prefix and a fetch implementation.
 3. Fetcher creation: `transport.createFetcher(endpoint)` binds a compatible Endpoint Contract to its Transport.
 4. Fetcher Execution: Call Input fills the variable request parts and becomes a Prepared Request.
 5. Runtime Result: the configured fetch function returns an observed HTTP response, which the transport module validates against the exact-status Response Shape.

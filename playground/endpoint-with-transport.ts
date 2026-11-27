@@ -5,7 +5,7 @@ import { codecs, createTransport, endpoint, path, type CallInput } from "../src/
 const origin = "https://api.example.com";
 const transport = createTransport({
   codecs,
-  baseUrl: origin,
+  prefix: origin,
   fetch,
 });
 

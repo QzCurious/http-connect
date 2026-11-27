@@ -12,7 +12,7 @@ import { createTransport } from "./transport";
 function createTestTransport() {
   return createTransport({
     codecs,
-    baseUrl: "https://api.example.com",
+    prefix: "https://api.example.com",
     fetch: vi.fn() as unknown as typeof fetch,
   });
 }
@@ -28,7 +28,7 @@ test("requires the decoders for every declared response alternative", () => {
       { status: 204 },
     ],
   });
-  const config = { baseUrl: "https://example.com", fetch: vi.fn<() => Promise<Response>>() };
+  const config = { prefix: "https://example.com", fetch: vi.fn<() => Promise<Response>>() };
   createFetcher(contract, {
     ...config,
     codecs: { decoders: { json: codecs.decoders.json, text: codecs.decoders.text } },

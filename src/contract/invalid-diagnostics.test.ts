@@ -116,7 +116,7 @@ test.each(cases)("diagnostics explain %s", async (expression, field, message) =>
     `
 import { path, endpoint, request, response, codecs, createTransport } from "./public";
 import { z } from "zod";
-const transport = createTransport({ codecs, baseUrl: "https://example.com", fetch });
+const transport = createTransport({ codecs, prefix: "https://example.com", fetch });
 const extraKey = Symbol();
 ${expression};
 `,

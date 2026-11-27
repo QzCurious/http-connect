@@ -4,7 +4,7 @@ import { shallowMergeDefined, type Invalid } from "../internal";
 import { createFetcher } from "./fetcher";
 
 export type TransportConfig = {
-  baseUrl: string;
+  prefix: string;
   fetch?: (request: Request, init?: RequestInit) => Promise<Response>;
   codecs?: Codecs;
 };
@@ -36,7 +36,7 @@ export function createTransport<const Config extends TransportConfig>(config: Co
     ) {
       const overrides: Pick<TransportConfig, "fetch" | "codecs"> | undefined = fetcherConfig;
       return createFetcher<Endpoint>(endpoint, {
-        baseUrl: config.baseUrl,
+        prefix: config.prefix,
         fetch: overrides?.fetch ?? config.fetch ?? globalThis.fetch,
         codecs: {
           encoders: shallowMergeDefined(config.codecs?.encoders, overrides?.codecs?.encoders),
