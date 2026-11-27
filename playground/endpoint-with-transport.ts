@@ -30,15 +30,21 @@ const listNotesContract = endpoint({
 
 const listNotes = transport.createFetcher(listNotesContract);
 
-type ListNotesInput = CallInput<typeof listNotesContract>;
+type ListNotesInput = Parameters<typeof listNotes>;
 type ListNotesResult = Awaited<ReturnType<typeof listNotes>>;
 
+// GET /workspaces/acme/notes?page=1 HTTP/1.1
+// Host: api.example.com
+// Accept-Language: en
 await listNotes({
   params: { workspaceId: "acme" },
   query: { page: 1 },
   headers: { "accept-language": "en" },
 });
 
+// GET /workspaces/acme/notes?page=2&tag=work&tag=urgent HTTP/1.1
+// Host: api.example.com
+// Accept-Language: zh-TW
 await listNotes({
   params: { workspaceId: "acme" },
   query: { page: 2, tag: ["work", "urgent"] },
@@ -66,6 +72,11 @@ const createNote = transport.createFetcher(createNoteContract);
 type CreateNoteInput = CallInput<typeof createNoteContract>;
 type CreateNoteResult = Awaited<ReturnType<typeof createNote>>;
 
+// POST /workspaces/acme/notes HTTP/1.1
+// Host: api.example.com
+// Content-Type: application/json
+//
+// {"title":"First note"}
 await createNote({ params: { workspaceId: "acme" }, body: " First note " });
 
 // =============================
@@ -94,6 +105,22 @@ type AttachNoteImageResult = Awaited<ReturnType<typeof attachNoteImage>>;
 
 const imageFile = new File(["mock image bytes"], "whiteboard.png", { type: "image/png" });
 
+// * The runtime generates the multipart boundary. This example uses "example-boundary".
+// 
+// POST /workspaces/acme/notes/note-42/images HTTP/1.1
+// Host: api.example.com
+// Content-Type: multipart/form-data; boundary=example-boundary
+//
+// --example-boundary
+// Content-Disposition: form-data; name="image"; filename="whiteboard.png"
+// Content-Type: image/png
+//
+// mock image bytes
+// --example-boundary
+// Content-Disposition: form-data; name="alt"
+//
+// Whiteboard sketch of the sign-in flow
+// --example-boundary--
 await attachNoteImage({
   params: { workspaceId: "acme", noteId: "note-42" },
   body: { image: imageFile, alt: "Whiteboard sketch of the sign-in flow" },
